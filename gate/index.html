@@ -26,7 +26,7 @@
   <main>
     <div class="mark" aria-hidden="true">⌁</div>
     <h1>访问验证</h1>
-    <p>请输入激活码。一个激活码激活后会绑定到当前浏览器。</p>
+    <p id="intro">请输入激活码。一个激活码激活后会绑定到当前浏览器。</p>
     <form id="form">
       <label for="code">激活码</label>
       <input id="code" name="code" autocomplete="off" autocapitalize="characters" placeholder="请输入激活码" required>
@@ -49,8 +49,20 @@
     const message = document.querySelector('#message');
     const claims = JSON.parse(localStorage.getItem(CLAIMS_KEY) || '{}');
 
+    const boundCode = Object.keys(claims).find((code) =>
+      ACTIVATION_CODES.includes(code) && claims[code] === deviceId
+    );
+    if (boundCode) {
+      input.disabled = true;
+      button.disabled = true;
+      button.textContent = '已验证，正在进入…';
+      message.textContent = '当前浏览器已绑定激活码。';
+      setTimeout(() => { window.location.replace(TARGET_URL); }, 250);
+    }
+
     form.addEventListener('submit', (event) => {
       event.preventDefault();
+      if (boundCode) return;
       const code = input.value.trim().toUpperCase();
       message.textContent = '';
       if (!ACTIVATION_CODES.includes(code)) {
