@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>访问验证</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f7fb; color: #172033; }
+    main { width: min(92vw, 420px); padding: 34px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 16px 40px #1d355710; }
+    .mark { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: #175cd3; color: #fff; font-size: 22px; margin-bottom: 20px; }
+    h1 { margin: 0 0 10px; font-size: 24px; }
+    p { margin: 0 0 24px; color: #667085; line-height: 1.6; font-size: 14px; }
+    label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+    input { width: 100%; height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 13px; font-size: 16px; letter-spacing: .08em; outline: none; }
+    input:focus { border-color: #175cd3; box-shadow: 0 0 0 3px #175cd322; }
+    button { width: 100%; height: 46px; margin-top: 14px; border: 0; border-radius: 8px; background: #175cd3; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+    button:hover { background: #0f4bb8; }
+    button:disabled { opacity: .65; cursor: wait; }
+    #message { min-height: 22px; margin-top: 13px; font-size: 13px; color: #d92d20; }
+    .foot { margin-top: 20px; padding-top: 16px; border-top: 1px solid #eef2f6; font-size: 12px; color: #98a2b3; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="mark" aria-hidden="true">⌁</div>
+    <h1>访问验证</h1>
+    <p>请输入激活码。一个激活码激活后会绑定到当前浏览器。</p>
+    <form id="form">
+      <label for="code">激活码</label>
+      <input id="code" name="code" autocomplete="off" autocapitalize="characters" placeholder="请输入激活码" required>
+      <button id="submit" type="submit">验证并进入</button>
+      <div id="message" role="status" aria-live="polite"></div>
+    </form>
+    <div class="foot">如需更换设备，请联系管理员解绑。</div>
+  </main>
+  <script>
+    const TARGET_URL = 'https://739252mqnk.coze.site/';
+    // Replace these demo codes before publishing. Keep codes on a server for production use.
+    const ACTIVATION_CODES = ['DEMO-2026-0001', 'DEMO-2026-0002', 'DEMO-2026-0003'];
+    const DEVICE_KEY = 'coze_gate_device_id';
+    const CLAIMS_KEY = 'coze_gate_claims';
+    const deviceId = localStorage.getItem(DEVICE_KEY) || crypto.randomUUID();
+    localStorage.setItem(DEVICE_KEY, deviceId);
+    const form = document.querySelector('#form');
+    const input = document.querySelector('#code');
+    const button = document.querySelector('#submit');
+    const message = document.querySelector('#message');
+    const claims = JSON.parse(localStorage.getItem(CLAIMS_KEY) || '{}');
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const code = input.value.trim().toUpperCase();
+      message.textContent = '';
+      if (!ACTIVATION_CODES.includes(code)) {
+        message.textContent = '激活码无效，请检查后重试。';
+        return;
+      }
+      const owner = claims[code];
+      if (owner && owner !== deviceId) {
+        message.textContent = '该激活码已绑定其他设备。';
+        return;
+      }
+      claims[code] = deviceId;
+      localStorage.setItem(CLAIMS_KEY, JSON.stringify(claims));
+      button.disabled = true;
+      button.textContent = '验证成功，正在进入…';
+      setTimeout(() => { window.location.href = TARGET_URL; }, 350);
+    });
+  </script>
+</body>
+</html>
