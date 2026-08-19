@@ -185,18 +185,9 @@
     .doc-block { margin: 0 0 .66em; line-height: var(--doc-leading, 1.55); text-align: justify; }
     .doc-title,
     .doc-heading,
-    .doc-subheading,
-    .board-label {
-      display: table;
-      padding: .08em .22em;
+    .doc-subheading {
       font-weight: 700;
       line-height: 1.32;
-      background: var(--heading-color, #38ddd5);
-      box-shadow: inset 0 0 0 1000px var(--heading-color, #38ddd5);
-      -webkit-box-decoration-break: clone;
-      box-decoration-break: clone;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
     }
     .doc-title { margin: 0 auto 1em; text-align: center; }
     .doc-heading { margin-top: .9em; margin-bottom: .72em; }
@@ -328,10 +319,6 @@
           </select>
         </div>
         <div class="field">
-          <label for="highlightColor">标题高亮</label>
-          <input id="highlightColor" class="control" type="color" value="#38ddd5">
-        </div>
-        <div class="field">
           <label for="maxFont">起始字号</label>
           <select id="maxFont" class="control">
             <option value="17">小四</option>
@@ -393,7 +380,7 @@
 
     <section class="preview-panel">
       <div class="preview-toolbar">
-        <div><strong id="previewTitle">两页预览</strong> <span>标题已统一高亮，板书自动放在最后一页末尾</span></div>
+        <div><strong id="previewTitle">两页预览</strong> <span>标题已统一加粗，板书自动放在最后一页末尾</span></div>
         <span id="fitSummary"></span>
       </div>
       <div class="pages" id="pages"></div>
@@ -499,7 +486,6 @@
       status: document.getElementById('status'),
       summary: document.getElementById('fitSummary'),
       font: document.getElementById('fontFamily'),
-      color: document.getElementById('highlightColor'),
       maxFont: document.getElementById('maxFont'),
       minFont: document.getElementById('minFont'),
       targetPages: document.getElementById('targetPages'),
@@ -1256,7 +1242,6 @@
             p.page.style.fontFamily = els.font.value;
             p.page.style.fontSize = `${size}px`;
             p.page.style.setProperty('--doc-leading', leading);
-            p.page.style.setProperty('--heading-color', els.color.value);
           });
           remaining = flowBlocks(blocks, pages);
           if (!remaining.length) { chosenFont=size; chosenLeading=leading; break outer; }
@@ -1363,34 +1348,8 @@
       return els.font.value.split(',')[0].replace(/["']/g, '').trim();
     }
 
-    function nearestWordHighlight(hex) {
-      const colors = {
-        yellow: '#ffff00', turquoise: '#00ffff', green: '#00ff00', pink: '#ff00ff',
-        blue: '#0000ff', red: '#ff0000', darkBlue: '#000080', darkTeal: '#008080',
-        darkGreen: '#008000', violet: '#800080', darkRed: '#800000', darkYellow: '#808000',
-        gray50: '#808080', gray25: '#c0c0c0'
-      };
-      const source = hex.replace('#','');
-      const rgb = [0,2,4].map(index => parseInt(source.slice(index,index+2),16));
-      return Object.entries(colors).reduce((best, entry) => {
-        const value = entry[1].slice(1);
-        const target = [0,2,4].map(index => parseInt(value.slice(index,index+2),16));
-        const distance = target.reduce((sum, channel, index) => sum + Math.pow(channel-rgb[index],2),0);
-        return distance < best.distance ? { name: entry[0], distance } : best;
-      }, { name: 'turquoise', distance: Infinity }).name;
-    }
-
     function wordFlowHtml(flow) {
       const clone = flow.cloneNode(true);
-      const color = els.color.value;
-      const wordColor = nearestWordHighlight(color);
-      clone.querySelectorAll('.doc-title, .doc-heading, .doc-subheading').forEach(heading => {
-        const span = document.createElement('span');
-        span.textContent = heading.textContent;
-        span.setAttribute('style', `background-color:${color};mso-highlight:${wordColor};mso-shading:${color};font-weight:bold;`);
-        heading.replaceChildren(span);
-        heading.setAttribute('style', `${heading.classList.contains('doc-title') ? 'text-align:center;' : ''}margin:0 0 8pt;`);
-      });
       return clone.innerHTML;
     }
 
@@ -1410,7 +1369,7 @@
     function wordDocumentHtml() {
       const pages=[...document.querySelectorAll('.page')];
       const fontName = selectedFontName();
-      const body=pages.map((p,i)=>`<section style="page-break-after:${i<pages.length-1?'always':'auto'};width:17.2cm;min-height:24.7cm;padding:1.5cm;font-family:'${fontName}';mso-fareast-font-family:'${fontName}';font-size:${p.style.fontSize};line-height:${p.style.getPropertyValue('--doc-leading')}">${wordFlowHtml(p.querySelector('.flow'))}${i===pages.length-1&&p.querySelector('canvas')?`<p><span style="background-color:${els.color.value};mso-highlight:${nearestWordHighlight(els.color.value)};font-weight:bold">五、板书设计</span></p><img style="width:100%" src="${p.querySelector('canvas').toDataURL('image/png')}">`:''}</section>`).join('');
+      const body=pages.map((p,i)=>`<section style="page-break-after:${i<pages.length-1?'always':'auto'};width:17.2cm;min-height:24.7cm;padding:1.5cm;font-family:'${fontName}';mso-fareast-font-family:'${fontName}';font-size:${p.style.fontSize};line-height:${p.style.getPropertyValue('--doc-leading')}">${wordFlowHtml(p.querySelector('.flow'))}${i===pages.length-1&&p.querySelector('canvas')?`<p style="font-weight:bold">五、板书设计</p><img style="width:100%" src="${p.querySelector('canvas').toDataURL('image/png')}">`:''}</section>`).join('');
       return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>@page{size:21cm 29.7cm;margin:0}.doc-block{margin:0 0 8pt}</style></head><body>${body}</body></html>`;
     }
 
@@ -1422,9 +1381,8 @@
       return xmlEscape(value).replace(/\n/g, '</w:t><w:br/><w:t xml:space="preserve">');
     }
 
-    function docxRun(text, fontName, size, highlighted) {
-      const highlight = highlighted ? `<w:highlight w:val="${nearestWordHighlight(els.color.value)}"/><w:shd w:val="clear" w:color="auto" w:fill="${els.color.value.replace('#','')}"/>` : '';
-      return `<w:r><w:rPr><w:rFonts w:ascii="${xmlEscape(fontName)}" w:hAnsi="${xmlEscape(fontName)}" w:eastAsia="${xmlEscape(fontName)}"/><w:sz w:val="${size}"/><w:szCs w:val="${size}"/>${highlight}${highlight ? '<w:b/>' : ''}</w:rPr><w:t xml:space="preserve">${docxText(text)}</w:t></w:r>`;
+    function docxRun(text, fontName, size, bold) {
+      return `<w:r><w:rPr><w:rFonts w:ascii="${xmlEscape(fontName)}" w:hAnsi="${xmlEscape(fontName)}" w:eastAsia="${xmlEscape(fontName)}"/><w:sz w:val="${size}"/><w:szCs w:val="${size}"/>${bold ? '<w:b/>' : ''}</w:rPr><w:t xml:space="preserve">${docxText(text)}</w:t></w:r>`;
     }
 
     function docxParagraph(block, fontName, fontSize, leading) {
@@ -1606,7 +1564,7 @@
     document.getElementById('prevBatch').addEventListener('click',()=>showBatchItem(batchIndex-1));
     document.getElementById('nextBatch').addEventListener('click',()=>showBatchItem(batchIndex+1));
     els.batchExport.addEventListener('click',exportBatchWord);
-    [els.font,els.color,els.maxFont,els.minFont,els.targetPages,els.autoBoard].forEach(el=>el.addEventListener('change',layout));
+    [els.font,els.maxFont,els.minFont,els.targetPages,els.autoBoard].forEach(el=>el.addEventListener('change',layout));
     els.boardStyle.addEventListener('change',()=>{ saveCurrentBatchItem(); layout(); updateBatchControls(); });
     document.getElementById('shuffleBoard').addEventListener('click',()=>{ boardVariantOffset += 1; layout(); });
     let inputTimer;
