@@ -694,11 +694,18 @@
     function classifyBlocks(body) {
       const parts = body.split(/\n\s*\n+/).map(v => v.trim()).filter(Boolean);
       let inAssignment = false;
+      const isLessonPlan = window.layoutDocumentType === 'plan';
       return parts.map((text, index) => {
         if (index === 0 && (text.startsWith('《') || text.length < 32)) return { type: 'title', text };
         const topLevelHeading = /^[一二三四五六七八九十]+[、.．]/.test(text);
         if (inAssignment && !topLevelHeading) return { type: 'body', text };
         if (topLevelHeading) inAssignment = /(?:布置作业|作业布置)/.test(text);
+        if (isLessonPlan) {
+          const planHeading = /^[一二三四五六七八九十]+[、.．]\s*[^\n]{0,28}$/.test(text)
+            || /^（[一二三四五六七八九十\d]+）\s*[^\n]{0,28}$/.test(text)
+            || /^(?:议题|环节|活动|任务)[一二三四五六七八九十\d]+[：:、.．]?\s*[^\n]{0,38}$/.test(text);
+          return { type: planHeading ? 'heading' : 'body', text };
+        }
         if (looksLikeHeading(text)) return { type: 'heading', text };
         if (/^【.+】$/.test(text)) return { type: 'heading', text };
         if (text.length < 36 && /[：:]$/.test(text)) return { type: 'subheading', text };
@@ -1589,6 +1596,174 @@
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
+  </script>
+  <style>
+    :root { --heading-highlight: #fff09a; }
+    .doc-title, .doc-heading, .doc-subheading {
+      width: fit-content;
+      max-width: 100%;
+      padding: .08em .32em;
+      background: var(--heading-highlight);
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+    .doc-title { padding-inline: .55em; }
+    .source-tabs { display:flex; gap:6px; margin:0 0 12px; }
+    .source-tab { flex:1; min-height:40px; border:1px solid var(--line); border-radius:6px; color:var(--ink); background:#fff; font-weight:700; }
+    .source-tab.active { color:#fff; border-color:var(--brand); background:var(--brand); }
+    .tool-badge { display:inline-block; margin-left:6px; padding:2px 6px; border-radius:3px; color:#245348; background:#e9f5f1; font-size:12px; font-weight:700; }
+  </style>
+  <script>
+    // First-stage workspace: one trial script and one lesson plan, exported separately.
+    (() => {
+      const documents = {
+        trial: { label: '试讲稿', text: '' },
+        plan: { label: '教案', text: '' }
+      };
+      let combinedText = localStorage.getItem('trial-plan-layout-combined') || '';
+      let activeType = 'trial';
+      let inputTimer;
+
+      document.title = '试讲稿＋教案排版器';
+      document.querySelector('.app-header').innerHTML = `
+        <div class="brand"><span class="brand-mark">文</span><strong>试讲稿＋教案排版器</strong><span class="tool-badge">第一部分</span></div>
+        <div class="header-actions"><button class="btn btn-header" id="clearActiveBtn" type="button">清空内容</button><button class="btn btn-header" id="exportBothBtn" type="button">导出两份 Word</button></div>`;
+      document.querySelector('.editor-panel').innerHTML = `
+        <h1 class="panel-title">试讲稿＋教案排版</h1>
+        <p class="panel-note">将试讲稿和教案一起粘贴到下方。工具会按独占一行的“《课程名》试讲稿”和“《课程名》教案设计”自动拆分；标题、章节标题和小标题会以黄色高亮，并保留到导出的 Word 文件中。</p>
+        <div class="source-tabs" role="tablist"><button class="source-tab active" data-type="trial" type="button">预览试讲稿</button><button class="source-tab" data-type="plan" type="button">预览教案</button></div>
+        <div class="field"><label id="sourceLabel" for="sourceText">合并内容</label><textarea id="sourceText" spellcheck="false" placeholder="《课程名》试讲稿\n粘贴试讲稿内容\n\n《课程名》教案设计\n粘贴教案内容"></textarea></div>
+        <div class="settings-grid">
+          <div class="field"><label for="fontFamily">正文字体</label><select id="fontFamily" class="control"><option value='SimSun, "Songti SC", serif'>宋体</option><option value='FangSong, STFangsong, serif'>仿宋</option><option value='KaiTi, "Kaiti SC", serif'>楷体</option><option value='SimHei, "Heiti SC", sans-serif'>黑体</option><option value='"Microsoft YaHei", "PingFang SC", sans-serif'>微软雅黑</option></select></div>
+          <div class="field"><label for="maxFont">起始字号</label><select id="maxFont" class="control"><option value="17">小四</option><option value="16" selected>五号</option><option value="15">小五</option></select></div>
+          <div class="field"><label for="minFont">最小字号</label><select id="minFont" class="control"><option value="10">10 px</option><option value="9" selected>9 px</option><option value="8">8 px</option></select></div>
+        </div>
+        <div class="switch-row"><div class="switch-copy"><strong>目标页数</strong><span>自动调整字号和行距</span></div><select id="targetPages" class="control" style="width:110px"><option value="1">1 页</option><option value="2" selected>2 页</option><option value="3">3 页</option><option value="4">4 页</option><option value="5">5 页</option></select></div>
+        <div class="switch-row"><div class="switch-copy"><strong>试讲稿自动生成板书</strong><span>仅对试讲稿中的“板书设计”生效</span></div><input class="switch" id="autoBoard" type="checkbox" checked></div>
+        <select id="boardStyle" hidden><option value="auto" selected>自动</option></select>
+        <button class="btn btn-primary full" id="layoutBtn" type="button">重新排版当前文档</button>
+        <div class="status" id="status" role="status">请在同一个文本框中粘贴试讲稿和教案。</div>`;
+
+      els.source = document.getElementById('sourceText');
+      els.status = document.getElementById('status');
+      els.font = document.getElementById('fontFamily');
+      els.maxFont = document.getElementById('maxFont');
+      els.minFont = document.getElementById('minFont');
+      els.targetPages = document.getElementById('targetPages');
+      els.autoBoard = document.getElementById('autoBoard');
+      els.boardStyle = document.getElementById('boardStyle');
+
+      function splitCombinedText(text) {
+        const lines = text.replace(/\r/g, '').split('\n');
+        const markers = [];
+        lines.forEach((line, index) => {
+          const clean = line.trim();
+          const explicit = clean.match(/^(?:【\s*)?(试讲稿|无生试讲稿|试讲逐字稿|教案|教学设计)(?:\s*】)?\s*$/);
+          if (explicit) {
+            markers.push({ index, type: /教案|教学设计/.test(explicit[1]) ? 'plan' : 'trial', includeTitle: false });
+            return;
+          }
+          const courseTrial = /^《[^》]+》\s*(?:无生)?试讲(?:逐字)?稿\s*$/i.test(clean);
+          const coursePlan = /^《[^》]+》\s*(?:教案|教学设计)(?:设计)?\s*$/i.test(clean);
+          if (courseTrial) markers.push({ index, type: 'trial', includeTitle: true });
+          else if (coursePlan) markers.push({ index, type: 'plan', includeTitle: true });
+        });
+        if (markers.length < 2) return null;
+        const parts = { trial: '', plan: '' };
+        markers.forEach((marker, index) => {
+          const end = index + 1 < markers.length ? markers[index + 1].index : lines.length;
+          const start = marker.includeTitle ? marker.index : marker.index + 1;
+          parts[marker.type] = lines.slice(start, end).join('\n').trim();
+        });
+        return parts.trial && parts.plan ? parts : null;
+      }
+      function saveActive() {
+        combinedText = els.source.value;
+        localStorage.setItem('trial-plan-layout-combined', combinedText);
+        const parts = splitCombinedText(combinedText);
+        documents.trial.text = parts?.trial || '';
+        documents.plan.text = parts?.plan || '';
+      }
+      function renderPreview() {
+        const combinedValue = els.source.value;
+        els.source.value = documents[activeType].text;
+        window.layoutDocumentType = activeType;
+        layout();
+        els.source.value = combinedValue;
+        document.getElementById('previewTitle').textContent = `${documents[activeType].label}预览`;
+      }
+      function updateUi() {
+        const doc = documents[activeType];
+        els.source.value = combinedText;
+        document.querySelectorAll('.source-tab').forEach(button => button.classList.toggle('active', button.dataset.type === activeType));
+        els.autoBoard.disabled = activeType === 'plan';
+        if (activeType === 'plan') els.autoBoard.checked = false;
+        document.getElementById('previewTitle').textContent = `${doc.label}预览`;
+        renderPreview();
+        const emptyState = document.querySelector('.empty-state');
+        if (emptyState) emptyState.textContent = `请粘贴${doc.label}`;
+      }
+      function documentBaseName(type) {
+        const text = documents[type].text;
+        const firstLine = normalize(text).split('\n').map(line => line.trim()).find(Boolean) || '未命名课程';
+        const title = (firstLine.match(/《([^》]+)》/) || [])[1] || firstLine.replace(/(?:无生)?试讲(?:逐字)?稿|教案|教学设计/g, '').trim() || '未命名课程';
+        const trialMaterial = normalize(documents.trial.text).match(/^\s*试讲素材\s*[：:]\s*([^\n\r（）()]+)/mi)?.[1]?.trim();
+        const safeTitle = title.replace(/[\\/:*?"<>|]/g, '-');
+        const safeMaterial = trialMaterial?.replace(/[\\/:*?"<>|]/g, '-');
+        if (!safeMaterial) return `《${safeTitle}》${documents[type].label}`;
+        return type === 'trial'
+          ? `《${safeTitle}》试讲稿（试讲素材：${safeMaterial}）`
+          : `《${safeTitle}》教案（素材：${safeMaterial}）`;
+      }
+      async function exportBothWord() {
+        saveActive();
+        const missing = Object.entries(documents).filter(([, doc]) => !normalize(doc.text)).map(([, doc]) => doc.label);
+        if (missing.length) {
+          els.status.className = 'status error';
+          els.status.textContent = `未识别到完整的${missing.join('、')}。请用独占一行的“《课程名》试讲稿”和“《课程名》教案设计”分隔两部分内容。`;
+          return;
+        }
+        const originalType = activeType;
+        const originalBoard = els.autoBoard.checked;
+        const button = document.getElementById('exportBothBtn');
+        button.disabled = true;
+        try {
+          for (const type of ['trial', 'plan']) {
+            activeType = type;
+            updateUi();
+            await new Promise(requestAnimationFrame);
+            els.status.className = 'status';
+            els.status.textContent = `正在生成${documents[type].label} Word 文件……`;
+            await downloadBlob(await buildDocxBlob(), `${documentBaseName(type)}.docx`);
+          }
+          els.status.textContent = '试讲稿和教案 Word 文件已分别导出。';
+        } finally {
+          activeType = originalType;
+          els.autoBoard.checked = originalBoard;
+          updateUi();
+          button.disabled = false;
+        }
+      }
+      window.docxRun = function(text, fontName, size, bold) {
+        return `<w:r><w:rPr><w:rFonts w:ascii="${xmlEscape(fontName)}" w:hAnsi="${xmlEscape(fontName)}" w:eastAsia="${xmlEscape(fontName)}"/><w:sz w:val="${size}"/><w:szCs w:val="${size}"/>${bold ? '<w:b/><w:highlight w:val="yellow"/>' : ''}</w:rPr><w:t xml:space="preserve">${docxText(text)}</w:t></w:r>`;
+      };
+      window.docxParagraph = function(block, fontName, fontSize, leading) {
+        const heading = /doc-(?:title|heading|subheading)/.test(block.className);
+        const centered = block.classList.contains('doc-title');
+        const size = heading ? Math.max(fontSize, Math.round(fontSize * 1.08)) : fontSize;
+        const line = Math.max(240, Math.round(size * 10 * leading));
+        return `<w:p><w:pPr>${centered ? '<w:jc w:val="center"/>' : ''}<w:spacing w:after="130" w:line="${line}" w:lineRule="auto"/></w:pPr>${docxRun(block.textContent, fontName, size, heading)}</w:p>`;
+      };
+
+      document.querySelectorAll('.source-tab').forEach(button => button.addEventListener('click', () => { saveActive(); activeType = button.dataset.type; updateUi(); }));
+      document.getElementById('clearActiveBtn').addEventListener('click', () => { els.source.value = ''; saveActive(); renderPreview(); });
+      document.getElementById('exportBothBtn').addEventListener('click', exportBothWord);
+      document.getElementById('layoutBtn').addEventListener('click', () => { saveActive(); renderPreview(); });
+      [els.font, els.maxFont, els.minFont, els.targetPages, els.autoBoard].forEach(element => element.addEventListener('change', () => { saveActive(); renderPreview(); }));
+      els.source.addEventListener('input', () => { saveActive(); clearTimeout(inputTimer); inputTimer = setTimeout(() => { renderPreview(); const emptyState = document.querySelector('.empty-state'); if (emptyState) emptyState.textContent = `请检查试讲稿与教案标题是否完整`; }, 450); });
+      saveActive();
+      updateUi();
+    })();
   </script>
 </body>
 </html>
