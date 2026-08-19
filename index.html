@@ -2,72 +2,1635 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>访问验证</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#176b5b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="试讲排版">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>试讲稿排版器</title>
   <style>
-    :root { color-scheme: light; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    :root {
+      --ink: #202321;
+      --muted: #68716d;
+      --line: #d8ddda;
+      --paper: #fff;
+      --surface: #f4f6f5;
+      --brand: #176b5b;
+      --brand-dark: #0f5548;
+      --highlight: #38ddd5;
+      --danger: #b42318;
+      --page-width: 794px;
+      --page-height: 1123px;
+    }
+
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f7fb; color: #172033; }
-    main { width: min(92vw, 420px); padding: 34px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 16px 40px #1d355710; }
-    .mark { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: #175cd3; color: #fff; font-size: 22px; margin-bottom: 20px; }
-    h1 { margin: 0 0 10px; font-size: 24px; }
-    p { margin: 0 0 24px; color: #667085; line-height: 1.6; font-size: 14px; }
-    label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
-    input { width: 100%; height: 46px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 13px; font-size: 16px; letter-spacing: .08em; outline: none; }
-    input:focus { border-color: #175cd3; box-shadow: 0 0 0 3px #175cd322; }
-    button { width: 100%; height: 46px; margin-top: 14px; border: 0; border-radius: 8px; background: #175cd3; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
-    button:hover { background: #0f4bb8; }
-    button:disabled { opacity: .65; cursor: wait; }
-    #message { min-height: 22px; margin-top: 13px; font-size: 13px; color: #d92d20; }
-    .foot { margin-top: 20px; padding-top: 16px; border-top: 1px solid #eef2f6; font-size: 12px; color: #98a2b3; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--surface);
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .app-header {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      color: #fff;
+      background: var(--brand-dark);
+      border-bottom: 1px solid rgba(255,255,255,.16);
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.56);
+      border-radius: 6px;
+      font-family: SimSun, serif;
+      font-weight: 700;
+    }
+    .brand strong { font-size: 17px; letter-spacing: 0; white-space: nowrap; }
+    .header-actions { display: flex; gap: 8px; }
+
+    .btn {
+      min-height: 36px;
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--ink);
+      background: #fff;
+    }
+    .btn:hover { background: #f8faf9; }
+    .btn-primary { color: #fff; border-color: var(--brand); background: var(--brand); }
+    .btn-primary:hover { background: var(--brand-dark); }
+    .btn-header { color: #fff; border-color: rgba(255,255,255,.42); background: transparent; }
+    .btn-header:hover { background: rgba(255,255,255,.1); }
+    .icon { margin-right: 5px; font-weight: 700; }
+
+    .workspace {
+      min-height: calc(100vh - 58px);
+      display: grid;
+      grid-template-columns: minmax(330px, 410px) minmax(0, 1fr);
+    }
+
+    .editor-panel {
+      padding: 18px;
+      background: #fff;
+      border-right: 1px solid var(--line);
+    }
+
+    .panel-title { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
+    .panel-note { margin: 0 0 16px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .field { margin-bottom: 14px; }
+    .field label, .group-label {
+      display: block;
+      margin-bottom: 6px;
+      color: #424945;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    textarea {
+      width: 100%;
+      height: 330px;
+      resize: vertical;
+      padding: 12px;
+      border: 1px solid #bfc7c3;
+      border-radius: 6px;
+      outline: none;
+      line-height: 1.65;
+      font-family: "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+    }
+    textarea:focus, select:focus, input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(23,107,91,.12); }
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .control {
+      width: 100%;
+      min-height: 38px;
+      padding: 7px 9px;
+      border: 1px solid #bfc7c3;
+      border-radius: 6px;
+      background: #fff;
+    }
+    input[type="color"] { padding: 3px; }
+    .switch-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-top: 1px solid #edf0ee;
+    }
+    .switch-copy strong { display: block; font-size: 13px; }
+    .switch-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .switch { width: 44px; height: 24px; accent-color: var(--brand); }
+    .full { width: 100%; }
+    .status {
+      min-height: 38px;
+      margin-top: 10px;
+      padding: 9px 10px;
+      color: #225345;
+      background: #e9f5f1;
+      border-left: 3px solid var(--brand);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .status.error { color: var(--danger); background: #fff1f0; border-left-color: var(--danger); }
+
+    .preview-panel { min-width: 0; padding: 18px 20px 40px; overflow: auto; }
+    .preview-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: -18px -20px 18px;
+      padding: 10px 20px;
+      background: rgba(244,246,245,.94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+    }
+    .preview-toolbar strong { font-size: 14px; }
+    .preview-toolbar span { color: var(--muted); font-size: 12px; }
+    .pages { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+    .page-shell { position: relative; flex: 0 0 auto; }
+    .page {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: var(--page-width);
+      height: var(--page-height);
+      transform-origin: left top;
+      color: #111;
+      background: var(--paper);
+      box-shadow: 0 5px 22px rgba(20,31,26,.13);
+      overflow: hidden;
+      font-family: SimSun, "Songti SC", serif;
+    }
+    .page-inner { position: absolute; inset: 56px 64px 52px; }
+    .page-number { position: absolute; bottom: 24px; left: 0; right: 0; text-align: center; color: #777; font-size: 12px; }
+    .page.has-board .page-number { display: none; }
+    .flow { height: 100%; overflow: hidden; }
+    .page.has-board .flow { height: 650px; }
+    .doc-block { margin: 0 0 .66em; line-height: var(--doc-leading, 1.55); text-align: justify; }
+    .doc-title,
+    .doc-heading,
+    .doc-subheading,
+    .board-label {
+      display: table;
+      padding: .08em .22em;
+      font-weight: 700;
+      line-height: 1.32;
+      background: var(--heading-color, #38ddd5);
+      box-shadow: inset 0 0 0 1000px var(--heading-color, #38ddd5);
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .doc-title { margin: 0 auto 1em; text-align: center; }
+    .doc-heading { margin-top: .9em; margin-bottom: .72em; }
+    .doc-subheading { margin-top: .7em; margin-bottom: .58em; }
+    .board-wrap {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 10px;
+      height: 300px;
+    }
+    .board-wrap .board-label {
+      display: block;
+      margin: 0 0 7px;
+      padding: 0;
+      color: #222;
+      background: transparent;
+      box-shadow: none;
+      font: 700 13px SimSun, serif;
+    }
+    .board-canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #154d3e; }
+    .empty-state { display: grid; place-items: center; height: 100%; color: #7b837f; font-size: 14px; }
+
+    .export-menu { position: relative; }
+    .export-popover {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 7px);
+      z-index: 20;
+      display: none;
+      width: 170px;
+      padding: 6px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.14);
+    }
+    .export-popover.open { display: block; }
+    .export-popover button { width: 100%; text-align: left; border: 0; background: transparent; padding: 9px; border-radius: 4px; }
+    .export-popover button:hover { background: #edf4f1; }
+
+    @media (max-width: 860px) {
+      .app-header { padding: 0 12px; }
+      .brand strong { font-size: 15px; }
+      .workspace { display: block; }
+      .editor-panel { border-right: 0; border-bottom: 1px solid var(--line); padding: 16px 14px; }
+      textarea { height: 280px; }
+      .preview-panel { padding: 14px 10px 28px; }
+      .preview-toolbar { margin: -14px -10px 14px; padding: 9px 12px; }
+      .preview-toolbar span { display: none; }
+      .pages { gap: 14px; }
+    }
+
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      body { background: #fff; }
+      .app-header, .editor-panel, .preview-toolbar { display: none !important; }
+      .workspace, .preview-panel, .pages { display: block; padding: 0; margin: 0; overflow: visible; }
+      .page-shell { width: 794px !important; height: 1123px !important; break-after: page; page-break-after: always; }
+      .page { position: relative; transform: none !important; box-shadow: none; }
+      .page-shell:last-child { break-after: auto; page-break-after: auto; }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <div class="mark" aria-hidden="true">⌁</div>
-    <h1>访问验证</h1>
-    <p>请输入激活码。一个激活码激活后会绑定到当前浏览器。</p>
-    <form id="form">
-      <label for="code">激活码</label>
-      <input id="code" name="code" autocomplete="off" autocapitalize="characters" placeholder="请输入激活码" required>
-      <button id="submit" type="submit">验证并进入</button>
-      <div id="message" role="status" aria-live="polite"></div>
-    </form>
-    <div class="foot">如需更换设备，请联系管理员解绑。</div>
-  </main>
-  <script>
-    const TARGET_URL = 'https://739252mqnk.coze.site/';
-    // Keep codes on a server for production use. This is the current single demo code.
-    const ACTIVATION_CODES = ['ANGMEINV-K8Q2-X7PD-4M9R-V6TZ-H3WN-5CJL-9FQA'];
-    const DEVICE_KEY = 'coze_gate_device_id';
-    const CLAIMS_KEY = 'coze_gate_claims';
-    const deviceId = localStorage.getItem(DEVICE_KEY) || crypto.randomUUID();
-    localStorage.setItem(DEVICE_KEY, deviceId);
-    const form = document.querySelector('#form');
-    const input = document.querySelector('#code');
-    const button = document.querySelector('#submit');
-    const message = document.querySelector('#message');
-    const claims = JSON.parse(localStorage.getItem(CLAIMS_KEY) || '{}');
+  <header class="app-header">
+    <div class="brand"><span class="brand-mark">稿</span><strong>试讲稿排版器</strong></div>
+    <div class="header-actions">
+      <button class="btn btn-header" id="clearBtn" type="button">清空</button>
+      <div class="export-menu">
+        <button class="btn btn-header" id="exportBtn" type="button"><span class="icon">⇩</span>一键输出</button>
+        <div class="export-popover" id="exportMenu">
+          <button type="button" data-export="pdf">PDF 文档</button>
+          <button type="button" data-export="word">Word 文档</button>
+          <button type="button" data-export="images">逐页图片</button>
+          <button type="button" data-export="board">仅板书图片</button>
+        </div>
+      </div>
+    </div>
+  </header>
 
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const code = input.value.trim().toUpperCase();
-      message.textContent = '';
-      if (!ACTIVATION_CODES.includes(code)) {
-        message.textContent = '激活码无效，请检查后重试。';
+  <main class="workspace">
+    <section class="editor-panel">
+      <h1 class="panel-title">粘贴试讲稿</h1>
+      <p class="panel-note">保留“一、新课导入”“环节一”等标题，最后以“五、板书设计”开始填写板书文字。</p>
+
+      <div class="field">
+        <label for="sourceText">稿件内容</label>
+        <textarea id="sourceText" spellcheck="false"></textarea>
+        <input id="fileImport" type="file" accept=".txt,.md,.docx" multiple hidden>
+        <button class="btn full" id="importBtn" type="button" style="margin-top:8px">导入稿件（电脑 / 网盘 / 微信 / WPS）</button>
+        <div id="batchTools" style="display:flex;gap:6px;align-items:center;margin-top:8px">
+          <button class="btn" id="prevBatch" type="button" aria-label="上一份稿件">←</button>
+          <div class="status" id="batchStatus" style="flex:1;margin:0;padding:7px 9px"></div>
+          <button class="btn" id="nextBatch" type="button" aria-label="下一份稿件">→</button>
+        </div>
+        <button class="btn full" id="batchExportBtn" type="button" style="display:none;margin-top:8px">合并导出 Word</button>
+        <button class="btn full" id="clearEditorBtn" type="button" style="margin-top:8px">清空稿件</button>
+      </div>
+
+      <div class="settings-grid">
+        <div class="field">
+          <label for="fontFamily">正文字体</label>
+          <select id="fontFamily" class="control">
+            <optgroup label="中文字体">
+              <option value='SimSun, "Songti SC", serif'>宋体</option>
+              <option value='FangSong, STFangsong, serif'>仿宋</option>
+              <option value='KaiTi, "Kaiti SC", serif'>楷体</option>
+              <option value='SimHei, "Heiti SC", sans-serif'>黑体</option>
+              <option value='"Microsoft YaHei", "PingFang SC", sans-serif'>微软雅黑</option>
+              <option value='STXingkai, "华文行楷", KaiTi, serif'>华文行楷</option>
+              <option value='STKaiti, "华文楷体", KaiTi, serif'>华文楷体</option>
+              <option value='STSong, "华文宋体", SimSun, serif'>华文宋体</option>
+              <option value='STZhongsong, "华文中宋", SimSun, serif'>华文中宋</option>
+            </optgroup>
+            <optgroup label="英文字体">
+              <option value='Arial, Helvetica, sans-serif'>Arial</option>
+              <option value='"Times New Roman", Times, serif'>Times New Roman</option>
+              <option value='Calibri, Arial, sans-serif'>Calibri</option>
+              <option value='Cambria, Georgia, serif'>Cambria</option>
+              <option value='Georgia, "Times New Roman", serif'>Georgia</option>
+              <option value='Verdana, Arial, sans-serif'>Verdana</option>
+              <option value='Tahoma, Arial, sans-serif'>Tahoma</option>
+              <option value='Garamond, Georgia, serif'>Garamond</option>
+              <option value='"Trebuchet MS", Arial, sans-serif'>Trebuchet MS</option>
+              <option value='"Courier New", Courier, monospace'>Courier New</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="field">
+          <label for="highlightColor">标题高亮</label>
+          <input id="highlightColor" class="control" type="color" value="#38ddd5">
+        </div>
+        <div class="field">
+          <label for="maxFont">起始字号</label>
+          <select id="maxFont" class="control">
+            <option value="17">小四</option>
+            <option value="16" selected>五号</option>
+            <option value="15">小五</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="minFont">最小字号</label>
+          <select id="minFont" class="control">
+            <option value="10">10 px</option>
+            <option value="9" selected>9 px</option>
+            <option value="8">8 px</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="switch-row">
+        <div class="switch-copy"><strong>目标页数</strong><span>自动调整字号和行距</span></div>
+        <select id="targetPages" class="control" style="width:110px" aria-label="目标页数">
+          <option value="1">1 页</option>
+          <option value="2" selected>2 页</option>
+          <option value="3">3 页</option>
+          <option value="4">4 页</option>
+          <option value="5">5 页</option>
+        </select>
+      </div>
+      <div class="switch-row">
+        <div class="switch-copy"><strong>自动生成板书</strong><span>分析内容后选择分栏、放射或流程布局</span></div>
+        <input class="switch" id="autoBoard" type="checkbox" checked aria-label="自动生成板书">
+      </div>
+      <div class="switch-row">
+        <div class="switch-copy"><strong>板书版式</strong><span>按课题自动变化，也可手动换款</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="boardStyle" class="control" style="width:128px" aria-label="板书版式">
+            <option value="auto" selected>自动变化</option>
+            <option value="timeline">时间轴</option>
+            <option value="radial">中心放射</option>
+            <option value="process">流程箭头</option>
+            <option value="compare">对照分栏</option>
+            <option value="columns">三栏结构</option>
+            <option value="hierarchy">层级递进</option>
+            <option value="grid">四栏主题</option>
+            <option value="mindmap">思维导图</option>
+            <option value="bubbles">气泡关联</option>
+            <option value="stairs">阶梯递进</option>
+            <option value="scroll">卷轴重点</option>
+            <option value="leaf">花叶发散</option>
+            <option value="book">打开的书</option>
+            <option value="doodle">手绘主题</option>
+          </select>
+          <button class="btn" id="shuffleBoard" type="button" aria-label="换一款板书">⤨</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary full" id="layoutBtn" type="button">重新排版</button>
+      <div class="status" id="status" role="status">正在分析样稿……</div>
+    </section>
+
+    <section class="preview-panel">
+      <div class="preview-toolbar">
+        <div><strong id="previewTitle">两页预览</strong> <span>标题已统一高亮，板书自动放在最后一页末尾</span></div>
+        <span id="fitSummary"></span>
+      </div>
+      <div class="pages" id="pages"></div>
+    </section>
+  </main>
+
+  <script src="html2canvas.min.js"></script>
+  <script>
+    const sampleText = `《犯罪与刑罚》无生试讲逐字稿
+
+一、新课导入
+
+师：上课，同学们好，请坐！
+
+师：同学们，我们先来看一个真实案例。2026年6月，央视《守护明天》节目播出了一期名为《祸起“校园墙”》的案例。13岁的初二学生鹤鹤，被同学在“校园墙”上匿名发帖，编造虚假信息恶意造谣。帖子迅速扩散，评论区里嘲讽、谩骂铺天盖地。长期的网络暴力让鹤鹤患上了重度抑郁，多次住院治疗。最终，法院判决侵权者公开赔礼道歉，并赔偿精神损害抚慰金。
+
+师：同学们，发帖同学因为这条匿名帖子承担了民事责任。老师想追问一句：如果网络暴力的后果更严重，比如导致受害者自杀，法律又该如何处理？从民事赔偿到刑事处罚，中间的界限在哪里？今天，让我们一起走进新课——《犯罪与刑罚》。
+
+二、新课讲授
+
+环节一：犯罪的基本特征
+
+师：同学们，我们先来思考一个问题：鹤鹤案中发帖同学承担的是民事责任，那什么样的行为会从民事违法升级为刑事违法，也就是犯罪呢？假设这个案例中，造谣者不仅编造虚假信息，还长期、有组织地对鹤鹤进行人身攻击，导致鹤鹤精神崩溃、自杀未遂。这时的行为性质是否发生了变化？
+
+师：接下来，请同学们阅读课本P96至P98，结合这个假设情形，自由发言，谈谈你对犯罪基本特征的理解。给大家1分钟思考。
+
+师：好，请这位举手的同学。
+
+师：你认为造成自杀未遂这样严重的后果，社会危害性远大于普通的造谣，已经触及了犯罪的本质。说得很好！严重社会危害性是犯罪的最本质特征。普通的民事侵权和犯罪之间，最根本的区别就在于行为对社会的危害程度。
+
+师：还有同学补充吗？好，后排那位同学。
+
+师：你关注到这种行为不仅违反了《民法典》，还触犯了刑法中关于侮辱罪、诽谤罪的规定。判断非常准确。刑事违法性是区分犯罪与其他违法行为的法律分界线。只有触犯了刑法的行为，才能被认定为犯罪。
+
+师：好，课代表也举手了，请讲。
+
+师：你认为造成这样严重后果的行为，必须受到最严厉的处罚，而不仅仅是赔偿道歉。理解得很深刻。犯罪是应当受到刑罚处罚的行为，这是犯罪的第三个基本特征。
+
+师：同学们总结得很到位。犯罪的三个基本特征就是：严重社会危害性、刑事违法性和应受刑罚处罚性。而规定什么行为是犯罪、应当处以何种刑罚的法律，就是刑法。我国刑法是保护国家和人民利益、惩治犯罪的有力武器。
+
+师：好，我们知道了犯罪的特征和刑法的内涵。那对于犯罪行为，法律会给予怎样的制裁呢？接下来，我们进入第二个环节。
+
+环节二：刑罚的内涵和类型
+
+师：同学们，我们继续看刚才假设的情形。如果造谣者的行为构成了侮辱罪、诽谤罪，法院会如何判决？这就涉及到刑罚的具体类型。
+
+师：接下来，请同学们阅读课本P98，以四人小组为单位讨论两个问题：第一，刑罚的内涵是什么？第二，我国的刑罚分为哪两大类？每一类包含哪些具体类型？请大家试着用刚才的假设案例，说说可能适用哪些刑罚。给大家3分钟。
+
+师：大家讨论得很认真。时间到，哪个小组先来分享？好，第二小组请。
+
+师：你们组认为刑罚是最严厉的强制性法律制裁，以限制或剥夺犯罪人权利为主要内容。概括得非常准确。在我国，只有审判机关才能依法对犯罪人适用刑罚。
+
+师：第三小组来谈谈刑罚的类型。
+
+师：你们组梳理出我国的刑罚分为主刑和附加刑两大类。主刑包括管制、拘役、有期徒刑、无期徒刑、死刑；附加刑包括罚金、剥夺政治权利、没收财产、驱逐出境。还结合案例提到，如果造谣者构成犯罪，可能被判处拘役或有期徒刑，并处罚金。分析得很到位！
+
+师：同学们要注意，主刑只能独立适用，不能附加适用；附加刑既可以独立适用，也可以附加在主刑上适用。比如法院可以判决“有期徒刑一年，并处罚金五千元”。
+
+师：好，我们了解了刑罚的内涵和类型。那么，面对犯罪行为，作为普通公民的我们又该如何应对呢？接下来，我们进入第三个环节。
+
+环节三：如何同犯罪行为作斗争
+
+师：同学们，回到鹤鹤的真实案例。当鹤鹤遭受网络暴力时，她的家人选择了报警，检察机关帮助固定了电子证据，最终通过法律途径维护了她的权益。这个过程中有哪些值得我们学习的做法？
+
+师：接下来，请同桌两人一组进行情景模拟。一人扮演目睹同学被网络欺凌的学生，一人扮演老师，围绕对话进行：“老师，我看到有人在网上造谣同学，我想帮忙又怕惹麻烦，该怎么办？”请结合课本P98内容设计回答。给大家2分钟准备。
+
+师：好，时间到。哪组同学愿意上台展示？请这一组。
+
+师：感谢两位！刚才老师的回答中提到既要敢于发声、及时声援受害者，又要注意保护自己、寻求老师和家长的帮助。大家觉得这体现了什么原则？好，这位同学。
+
+师：你认为面对犯罪不能袖手旁观，但也不能蛮干。说得很精炼！面对犯罪行为，我们要敢于斗争，及时对受害者给予声援和救助。但更要善于斗争，在保全自己、减少伤害的前提下，巧妙地借助他人或社会的力量，采取机智灵活的方式，有勇有谋地同犯罪行为作斗争。这就是我们常说的从“见义勇为”到“见义智为”。
+
+三、课堂小结
+
+师：同学们，这节课我们通过鹤鹤案例及其延伸思考，读懂了犯罪与刑罚。我们知道了犯罪具有严重社会危害性、刑事违法性和应受刑罚处罚性三大特征，刑法是惩治犯罪、保护人民的有力武器。我们了解了刑罚分为主刑和附加刑两大类，是最严厉的法律制裁。我们更学会了面对犯罪行为要敢于斗争、善于斗争，做到见义智为。
+
+师：从民事违法到刑事犯罪，中间隔着的不仅是行为后果的严重程度，更是对法律底线的敬畏。希望同学们从今天起，不仅自己远离违法犯罪，更能在他人需要时挺身而出、机智应对，做一个知法守法、有勇有谋的好少年！
+
+四、布置作业
+
+师：今天的作业：请结合本节课所学，思考在校园生活中还可能遇到哪些需要“见义智为”的情形，写一段200字左右的应对策略，下节课交流分享。
+
+师：好，这节课就上到这里，下课！同学们再见！
+
+五、板书设计
+
+犯罪与刑罚
+
+一、犯罪的基本特征
+严重社会危害性·刑事违法性·应受刑罚处罚性
+
+二、刑罚的类型
+主刑：管制→拘役→有期徒刑→无期徒刑→死刑
+附加刑：罚金·剥夺政治权利·没收财产·驱逐出境
+
+三、同犯罪行为作斗争
+敢于斗争·善于斗争
+见义勇为→见义智为`;
+
+    const els = {
+      source: document.getElementById('sourceText'),
+      pages: document.getElementById('pages'),
+      status: document.getElementById('status'),
+      summary: document.getElementById('fitSummary'),
+      font: document.getElementById('fontFamily'),
+      color: document.getElementById('highlightColor'),
+      maxFont: document.getElementById('maxFont'),
+      minFont: document.getElementById('minFont'),
+      targetPages: document.getElementById('targetPages'),
+      autoBoard: document.getElementById('autoBoard'),
+      boardStyle: document.getElementById('boardStyle'),
+      fileImport: document.getElementById('fileImport'),
+      batchTools: document.getElementById('batchTools'),
+      batchStatus: document.getElementById('batchStatus'),
+      batchExport: document.getElementById('batchExportBtn')
+    };
+
+    let boardVariantOffset = 0;
+    let batchItems = [];
+    let batchIndex = 0;
+    const batchStyleOrder = ['book', 'doodle', 'leaf', 'scroll', 'stairs', 'bubbles'];
+
+      els.source.value = localStorage.getItem('trial-layout-text') || sampleText;
+      els.batchStatus.textContent = '可一次导入多篇稿件；识别后可用左右箭头切换。';
+
+    function normalize(text) {
+      return text.replace(/```/g, '').replace(/\r/g, '').replace(/[ \t]+$/gm, '').trim();
+    }
+
+    async function readDocx(file) {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      let end = -1;
+      for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
+        if (view.getUint32(i, true) === 0x06054b50) { end = i; break; }
+      }
+      if (end < 0) throw new Error('不是可读取的 DOCX 文件');
+      const entries = view.getUint16(end + 10, true), central = view.getUint32(end + 16, true);
+      let cursor = central;
+      for (let i = 0; i < entries; i++) {
+        if (view.getUint32(cursor, true) !== 0x02014b50) break;
+        const method = view.getUint16(cursor + 10, true), compressed = view.getUint32(cursor + 20, true);
+        const nameLength = view.getUint16(cursor + 28, true), extraLength = view.getUint16(cursor + 30, true), commentLength = view.getUint16(cursor + 32, true);
+        const name = new TextDecoder().decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
+        const local = view.getUint32(cursor + 42, true);
+        if (name === 'word/document.xml') {
+          const localNameLength = view.getUint16(local + 26, true), localExtraLength = view.getUint16(local + 28, true);
+          const payload = bytes.slice(local + 30 + localNameLength + localExtraLength, local + 30 + localNameLength + localExtraLength + compressed);
+          let xmlBytes = payload;
+          if (method === 8) {
+            if (!('DecompressionStream' in window)) throw new Error('当前浏览器不能读取 DOCX，请先在 WPS 中另存为 TXT');
+            xmlBytes = new Uint8Array(await new Response(new Blob([payload]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+          } else if (method !== 0) throw new Error('DOCX 压缩方式不受支持');
+          const xml = new TextDecoder().decode(xmlBytes);
+          const formattedXml = xml.replace(/<w:tab\/?\s*>/g, '\t').replace(/<w:br[^>]*\/?\s*>/g, '\n').replace(/<\/w:p>/g, '\n\n');
+          const parsed = new DOMParser().parseFromString(formattedXml, 'text/xml');
+          if (!parsed.querySelector('parsererror')) return normalize(parsed.documentElement.textContent || '');
+
+          // Some WPS/Word files contain one malformed XML tag. Keep the text
+          // runs instead of importing the browser's English parser-error page.
+          const decoded = formattedXml
+            .replace(/<w:t\b[^>]*>/g, '').replace(/<\/w:t>/g, '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&(#x?[0-9a-f]+|amp|lt|gt|quot|apos);/gi, (_, entity) => {
+              const named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+              if (named[entity.toLowerCase()]) return named[entity.toLowerCase()];
+              const code = entity[0].toLowerCase() === 'x' ? parseInt(entity.slice(1), 16) : parseInt(entity.slice(1), 10);
+              return Number.isFinite(code) ? String.fromCodePoint(code) : '';
+            });
+          const text = normalize(decoded);
+          if (!text) throw new Error('DOCX 正文无法读取，请在 WPS 中另存为 TXT 后再导入');
+          return text;
+        }
+        cursor += 46 + nameLength + extraLength + commentLength;
+      }
+      throw new Error('DOCX 中没有找到正文');
+    }
+
+    async function readImportedFile(file) {
+      const extension = (file.name.split('.').pop() || '').toLowerCase();
+      if (extension === 'docx') return readDocx(file);
+      if (extension === 'txt' || extension === 'md') return normalize(await file.text());
+      throw new Error('仅支持 TXT、MD 和 DOCX 文件');
+    }
+
+    function splitImportedDrafts(text, fallbackName) {
+      const clean = normalize(text);
+      const lines = clean.split('\n');
+      const markers = [];
+      let offset = 0;
+      let inBoardDesign = false;
+      for (let index = 0; index < lines.length; index++) {
+        const line = lines[index].trim();
+        if (/^\s*(?:[五5][、.．]\s*)?板书设计\s*$/.test(line)) {
+          inBoardDesign = true;
+          offset += lines[index].length + 1;
+          continue;
+        }
+        const title = line.match(/^\s*(?:第\s*[一二三四五六七八九十\d]+\s*(?:课|框)\s*)?《([^》]+)》[^\n]*?(?:无生)?试讲(?:逐字)?稿[^\n]*$/i);
+        const bookTitle = line.match(/^\s*(?:第\s*[一二三四五六七八九十\d]+\s*(?:课|框)\s*)?《([^》]+)》\s*$/);
+        const lessonHeading = line.match(/^\s*第\s*[一二三四五六七八九十\d]+\s*(?:篇|课|框)\s*[：:、.．-]?\s*(?:《([^》]+)》|([^《》\n]+?))\s*(?:无生)?试讲(?:逐字)?稿\s*$/) || line.match(/^\s*第\s*[一二三四五六七八九十\d]+\s*(?:篇|课|框)\s*[：:、.．-]?\s*(?:《([^》]+)》|([^《》\n]{2,30}?))\s*$/);
+        if (title) {
+          markers.push({ index, offset, name: title[1].trim() });
+          inBoardDesign = false;
+        } else if (bookTitle && !inBoardDesign) {
+          const following = lines.slice(index + 1, index + 13).join('\n');
+          const looksLikeDraft = /(?:无生)?试讲(?:逐字)?稿|试讲素材|教学设计|教学目标|^\s*一[、.．]\s*(?:新课导入|新课引入|导入)/m.test(following);
+          if (index === 0 || looksLikeDraft) markers.push({ index, offset, name: bookTitle[1].trim() });
+        } else if (lessonHeading && (!inBoardDesign || /(?:无生)?试讲(?:逐字)?稿\s*$/.test(line))) {
+          markers.push({ index, offset, name: (lessonHeading[1] || lessonHeading[2]).trim() });
+          inBoardDesign = false;
+        }
+        offset += lines[index].length + 1;
+      }
+      if (markers.length < 2) {
+        const sectionMarkers = [];
+        offset = 0;
+        lines.forEach((line, index) => {
+          if (/^\s*一[、.．]\s*(?:新课导入|新课引入)/.test(line)) sectionMarkers.push({ index, offset });
+          offset += line.length + 1;
+        });
+        if (markers.length === 0 && sectionMarkers.length >= 2 && sectionMarkers.every((marker, index) => index === 0 || marker.offset - sectionMarkers[index - 1].offset > 240)) {
+          markers.push(...sectionMarkers.map((marker, index) => ({ ...marker, name: `${fallbackName}-${index + 1}` })));
+        }
+      }
+      // Keep the first draft even when its title uses an unrecognized format.
+      if (markers.length && markers[0].offset > 0) {
+        const prefix = clean.slice(0, markers[0].offset).trim();
+        const prefixTitle = [...prefix.matchAll(/《([^》]+)》/g)].at(-1)?.[1]?.trim();
+        if (prefix.length >= 80 || prefixTitle) markers.unshift({ index: 0, offset: 0, name: prefixTitle || `${fallbackName}-1` });
+      }
+      if (markers.length < 2) return [{ name: markers[0]?.name || fallbackName, text: clean }];
+      return markers.map((marker, index) => ({
+        name: marker.name,
+        text: clean.slice(marker.offset, index + 1 < markers.length ? markers[index + 1].offset : clean.length).trim()
+      })).filter(item => item.text);
+    }
+
+    function updateBatchControls() {
+      const active = batchItems.length > 1;
+      els.batchTools.style.display = 'flex';
+      els.batchExport.style.display = active ? 'block' : 'none';
+      if (active) els.batchStatus.textContent = `已导入 ${batchItems.length} 篇：第 ${batchIndex + 1} 篇 ${batchItems[batchIndex].name} · ${els.boardStyle.options[els.boardStyle.selectedIndex]?.text || '自动变化'}`;
+      else els.batchStatus.textContent = batchItems.length ? '目前识别为 1 篇，请导入包含多篇标题的文件或同时选择多个文件。' : '可一次导入多篇稿件；识别后可用左右箭头切换。';
+      document.getElementById('prevBatch').disabled = !active || batchIndex === 0;
+      document.getElementById('nextBatch').disabled = !active || batchIndex === batchItems.length - 1;
+    }
+
+    function saveCurrentBatchItem() {
+      if (batchItems[batchIndex]) {
+        batchItems[batchIndex].text = els.source.value;
+        batchItems[batchIndex].style = els.boardStyle.value;
+      }
+    }
+
+    function showBatchItem(index) {
+      saveCurrentBatchItem();
+      batchIndex = Math.max(0, Math.min(index, batchItems.length - 1));
+      els.source.value = batchItems[batchIndex].text;
+      els.boardStyle.value = batchItems[batchIndex].style || 'auto';
+      layout();
+      updateBatchControls();
+    }
+
+    async function importFiles(files) {
+      const selected = [...files];
+      if (!selected.length) return;
+      els.status.className = 'status';
+      els.status.textContent = `正在导入 ${selected.length} 篇稿件……`;
+      const results = await Promise.all(selected.map(async file => {
+        try { return { name: file.name.replace(/\.[^.]+$/, ''), text: await readImportedFile(file) }; }
+        catch (error) { return { name: file.name, error: error.message }; }
+      }));
+      batchItems = results.filter(item => item.text).flatMap(item => splitImportedDrafts(item.text, item.name)).map((item, index) => ({
+        ...item,
+        style: batchStyleOrder[index % batchStyleOrder.length]
+      }));
+      batchIndex = 0;
+      const failed = results.filter(item => item.error);
+      if (!batchItems.length) {
+        els.status.className = 'status error';
+        els.status.textContent = `未能导入文件：${failed.map(item => item.name).join('、')}`;
         return;
       }
-      const owner = claims[code];
-      if (owner && owner !== deviceId) {
-        message.textContent = '该激活码已绑定其他设备。';
+      els.source.value = batchItems[0].text;
+      els.boardStyle.value = batchItems[0].style || 'auto';
+      layout();
+      updateBatchControls();
+      els.status.textContent = `已从 ${selected.length} 个文件识别 ${batchItems.length} 篇稿件${failed.length ? `，${failed.length} 个文件未读取` : ''}。可切换查看或批量导出。`;
+    }
+
+    function splitSource(text) {
+      const clean = normalize(text);
+      const marker = /^\s*(?:[五5][、.．]\s*)?板书设计\s*$/m;
+      const hit = marker.exec(clean);
+      if (!hit) return { body: clean, board: '' };
+      return {
+        body: clean.slice(0, hit.index).trim(),
+        board: clean.slice(hit.index + hit[0].length).trim()
+      };
+    }
+
+    function looksLikeHeading(text) {
+      const oneLine = !text.includes('\n');
+      const speakerLine = /^(?:师|生|教师|学生|老师|主持人)[：:]/.test(text);
+      const numbered = /^[一二三四五六七八九十]+[、.．]/.test(text) || /^\d+[、.．]/.test(text);
+      const named = /^(?:议题|环节|活动|任务|问题|步骤|探究|情境|板块|主题|项目|阶段)[一二三四五六七八九十\d]+(?:[：:、.．]|\s|$)/.test(text);
+      const shortStandalone = oneLine && text.length <= 28 && !speakerLine && !/[。！？；]$/.test(text);
+      return numbered || named || shortStandalone;
+    }
+
+    function classifyBlocks(body) {
+      const parts = body.split(/\n\s*\n+/).map(v => v.trim()).filter(Boolean);
+      let inAssignment = false;
+      return parts.map((text, index) => {
+        if (index === 0 && (text.startsWith('《') || text.length < 32)) return { type: 'title', text };
+        const topLevelHeading = /^[一二三四五六七八九十]+[、.．]/.test(text);
+        if (inAssignment && !topLevelHeading) return { type: 'body', text };
+        if (topLevelHeading) inAssignment = /(?:布置作业|作业布置)/.test(text);
+        if (looksLikeHeading(text)) return { type: 'heading', text };
+        if (/^【.+】$/.test(text)) return { type: 'heading', text };
+        if (text.length < 36 && /[：:]$/.test(text)) return { type: 'subheading', text };
+        return { type: 'body', text };
+      });
+    }
+
+    function createPage(number, withBoard) {
+      const shell = document.createElement('div');
+      shell.className = 'page-shell';
+      const page = document.createElement('article');
+      page.className = 'page' + (withBoard ? ' has-board' : '');
+      page.dataset.page = number;
+      page.innerHTML = `<div class="page-inner"><div class="flow"></div>${withBoard ? '<div class="board-wrap"><div class="board-label">五、板书设计</div><canvas class="board-canvas" width="1280" height="720"></canvas></div>' : ''}</div><div class="page-number">${number}</div>`;
+      shell.appendChild(page);
+      els.pages.appendChild(shell);
+      return { shell, page, flow: page.querySelector('.flow'), canvas: page.querySelector('canvas') };
+    }
+
+    function blockElement(block) {
+      const el = document.createElement('div');
+      el.className = `doc-block doc-${block.type}`;
+      el.textContent = block.text;
+      return el;
+    }
+
+    function fits(container) { return container.scrollHeight <= container.clientHeight + 1; }
+
+    function splitToFit(block, flow) {
+      let low = 1, high = block.text.length, best = 0;
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        const test = blockElement({ ...block, text: block.text.slice(0, mid) });
+        flow.appendChild(test);
+        const ok = fits(flow);
+        test.remove();
+        if (ok) { best = mid; low = mid + 1; } else { high = mid - 1; }
+      }
+      if (!best) return null;
+      let cut = best;
+      const near = block.text.slice(0, best);
+      const punctuation = Math.max(near.lastIndexOf('。'), near.lastIndexOf('！'), near.lastIndexOf('？'), near.lastIndexOf('；'));
+      if (punctuation > best * .62) cut = punctuation + 1;
+      return [block.text.slice(0, cut), block.text.slice(cut)];
+    }
+
+    function flowBlocks(blocks, pages) {
+      pages.forEach(p => p.flow.replaceChildren());
+      let pageIndex = 0;
+      const queue = blocks.map(x => ({ ...x }));
+      while (queue.length && pageIndex < pages.length) {
+        const block = queue.shift();
+        const el = blockElement(block);
+        pages[pageIndex].flow.appendChild(el);
+        if (fits(pages[pageIndex].flow)) continue;
+        el.remove();
+        if (block.type === 'body') {
+          const split = splitToFit(block, pages[pageIndex].flow);
+          if (split) {
+            pages[pageIndex].flow.appendChild(blockElement({ ...block, text: split[0] }));
+            if (split[1].trim()) queue.unshift({ ...block, text: split[1].trimStart() });
+          } else {
+            queue.unshift(block);
+          }
+        } else {
+          queue.unshift(block);
+        }
+        pageIndex++;
+      }
+      return queue;
+    }
+
+    function parseBoard(text) {
+      const lines = normalize(text).split(/\n+/).map(v => v.trim()).filter(Boolean);
+      if (!lines.length) return { title: '板书设计', sections: [] };
+      let title = currentCourseName();
+      if (/^标题[：:]/.test(lines[0])) title = lines.shift().replace(/^标题[：:]\s*/, '');
+      else if (lines.length > 1 && !/[：:]/.test(lines[0]) && lines[0].length <= 20) title = lines.shift();
+      const sections = [];
+      for (const line of lines) {
+        if (/^[一二三四五六七八九十]+[、.．]/.test(line) || /^\d+[、.．]/.test(line)) {
+          sections.push({ heading: line, details: [] });
+        } else if (/[：:]/.test(line)) {
+          const [heading, ...details] = line.split(/[：:]/);
+          sections.push({ heading: heading.trim(), details: details.join('：').split(/[·|｜、；;]+/).map(item => item.trim()).filter(Boolean) });
+        } else if (sections.length) {
+          sections[sections.length - 1].details.push(line);
+        } else {
+          sections.push({ heading: line, details: [] });
+        }
+      }
+      return { title, sections: sections.slice(0, 5) };
+    }
+
+    function roundedRect(ctx, x, y, w, h, r, color) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function chalkLine(ctx, x1, y1, x2, y2, color = '#f2f1dc', width = 3) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = .86;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function arrow(ctx, x1, y1, x2, y2, color) {
+      chalkLine(ctx, x1, y1, x2, y2, color, 4);
+      const angle = Math.atan2(y2-y1, x2-x1);
+      const size = 17;
+      chalkLine(ctx, x2, y2, x2-size*Math.cos(angle-.55), y2-size*Math.sin(angle-.55), color, 4);
+      chalkLine(ctx, x2, y2, x2-size*Math.cos(angle+.55), y2-size*Math.sin(angle+.55), color, 4);
+    }
+
+    function fitText(ctx, text, maxWidth, start, min = 20) {
+      let size = start;
+      while (size > min) {
+        ctx.font = `700 ${size}px "FZKai-Z03", STKaiti, KaiTi, "Microsoft YaHei", sans-serif`;
+        if (ctx.measureText(text).width <= maxWidth) break;
+        size -= 1;
+      }
+      return size;
+    }
+
+    function wrapBoardText(ctx, text, maxWidth, size) {
+      ctx.font = `700 ${size}px "FZKai-Z03", STKaiti, KaiTi, "Microsoft YaHei", sans-serif`;
+      const lines = [];
+      let line = '';
+      for (const char of String(text)) {
+        if (ctx.measureText(line + char).width > maxWidth && line) {
+          lines.push(line);
+          line = char;
+        } else line += char;
+      }
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    function drawCentered(ctx, text, x, y, maxWidth, size, color = '#f7f3df') {
+      size = fitText(ctx, text, maxWidth, size);
+      let lines = wrapBoardText(ctx, text, maxWidth, size);
+      while (lines.length > 3 && size > 15) {
+        size -= 1;
+        lines = wrapBoardText(ctx, text, maxWidth, size);
+      }
+      if (lines.length > 3) lines = [...lines.slice(0, 2), `${lines[2].slice(0, Math.max(1, lines[2].length - 1))}…`];
+      ctx.font = `700 ${size}px "FZKai-Z03", STKaiti, KaiTi, "Microsoft YaHei", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = Math.max(1, size / 22);
+      const lineHeight = Math.round(size * 1.22);
+      lines.forEach((line, index) => {
+        const lineY = y + (index - (lines.length - 1) / 2) * lineHeight;
+        ctx.globalAlpha = .18;
+        ctx.strokeText(line, x-1, lineY+1);
+        ctx.globalAlpha = .95;
+        ctx.fillText(line, x, lineY);
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function boardHash(text) {
+      return [...text].reduce((hash, char) => ((hash * 31 + char.charCodeAt(0)) >>> 0), 7);
+    }
+
+    function boardLines(section, limit = 6) {
+      return section.details.flatMap(detail => detail.split(/[·|｜、；;]+/)).map(line => line.trim()).filter(Boolean).slice(0, limit);
+    }
+
+    function boardStyleFor(data) {
+      const requested = els.boardStyle.value;
+      if (requested !== 'auto') return requested;
+      const all = [data.title, ...data.sections.flatMap(section => [section.heading, ...section.details])].join(' ');
+      const isTimeline = /\d{2,4}|年代|阶段|时期|至今|以前|之后|改革开放/.test(all);
+      const isCompare = /英国|美国|法国|中国|亚洲|欧洲|非洲|苏联|东欧|对照|比较|不同/.test(all);
+      const isCause = /原因|过程|影响|意义|措施|结果|特点|评价|作用/.test(all);
+      const styles = isTimeline ? ['timeline', 'stairs', 'process', 'hierarchy'] : isCompare ? ['compare', 'book', 'mindmap', 'doodle'] : isCause ? ['process', 'stairs', 'scroll', 'doodle'] : ['book', 'doodle', 'leaf', 'bubbles'];
+      return styles[(boardHash(all) + boardVariantOffset) % styles.length];
+    }
+
+    function drawTimeline(ctx, data, sections, theme) {
+      const W = ctx.canvas.width;
+      drawCentered(ctx, data.title, W/2, 76, W-220, 56, theme.title);
+      chalkLine(ctx, 100, 330, W-105, 330, '#f1ead2', 4);
+      sections.forEach((section, i) => {
+        const x = 115 + i * ((W-230) / Math.max(1, sections.length-1));
+        const above = i % 2 === 0;
+        ctx.fillStyle = [theme.accent, '#f58b87', '#9bd9ea', '#f4f1df'][i % 4];
+        ctx.beginPath(); ctx.arc(x, 330, 12, 0, Math.PI*2); ctx.fill();
+        drawCentered(ctx, section.heading, x, above ? 238 : 418, 220, 28, ctx.fillStyle);
+        boardLines(section, 3).forEach((line, j) => drawCentered(ctx, line, x, (above ? 276 : 458) + j*34, 220, 22, '#f4f1df'));
+      });
+      arrow(ctx, W-135, 330, W-92, 330, '#f1ead2');
+    }
+
+    function drawProcess(ctx, data, sections, theme) {
+      const W = ctx.canvas.width;
+      drawCentered(ctx, data.title, W/2, 76, W-220, 56, theme.title);
+      const count = Math.min(sections.length, 4), gap = 28, boxW = (W-150-gap*(count-1))/count;
+      sections.slice(0, count).forEach((section, i) => {
+        const x = 75 + i*(boxW+gap), y = i%2 ? 260 : 190, h = 270;
+        roundedRect(ctx, x, y, boxW, h, 20, i%2 ? '#f3d06f' : '#e8ead8');
+        drawCentered(ctx, section.heading, x+boxW/2, y+52, boxW-32, 30, '#f8f4df');
+        chalkLine(ctx, x+25, y+88, x+boxW-25, y+88, '#dfe5d3', 2);
+        boardLines(section).forEach((line, j) => drawCentered(ctx, line, x+boxW/2, y+130+j*42, boxW-30, 24, j%2 ? '#f4d878' : '#f4f1df'));
+        if (i < count-1) arrow(ctx, x+boxW+5, y+h/2, x+boxW+gap-5, y+h/2, '#f0e9cf');
+      });
+    }
+
+    function drawCompare(ctx, data, sections, theme) {
+      const W = ctx.canvas.width, H = ctx.canvas.height, cx = W/2, cy = 390;
+      roundedRect(ctx, cx-170, cy-70, 340, 140, 24, theme.accent);
+      drawCentered(ctx, data.title, cx, cy, 300, 34, '#f8f4df');
+      const positions = [[W*.24,245],[W*.76,245],[W*.24,560],[W*.76,560]];
+      sections.slice(0,4).forEach((section, i) => {
+        const [x,y] = positions[i];
+        arrow(ctx, cx + (x<cx ? -175 : 175), cy + (y<cy ? -62 : 62), x + (x<cx ? 120 : -120), y, '#e7ead8');
+        roundedRect(ctx, x-155, y-72, 310, 144, 18, '#e7ead8');
+        drawCentered(ctx, section.heading, x, y-38, 270, 28, i%2 ? '#f58b87' : theme.accent);
+        boardLines(section, 3).forEach((line,j) => drawCentered(ctx,line,x,y+2+j*30,270,21,'#f4f1df'));
+      });
+    }
+
+    function drawColumns(ctx, data, sections, theme) {
+      const W = ctx.canvas.width;
+      drawCentered(ctx, data.title, W/2, 68, W-180, 53, '#fff8e8');
+      chalkLine(ctx, 150, 116, W-150, 116, theme.accent, 3);
+      const count = Math.min(3, sections.length), gap = 34, boxW = (W-150-gap*2)/3;
+      sections.slice(0, count).forEach((section, i) => {
+        const x = 75 + i*(boxW+gap), y = 165, h = 405;
+        const color = [theme.accent, '#9bd9ea', '#f58b87'][i];
+        roundedRect(ctx, x, y, boxW, h, 12, '#eee9d6');
+        drawCentered(ctx, section.heading, x+boxW/2, y+47, boxW-38, 29, color);
+        chalkLine(ctx, x+28, y+86, x+boxW-28, y+86, color, 2);
+        boardLines(section, 5).forEach((line,j) => drawCentered(ctx, line, x+boxW/2, y+145+j*56, boxW-42, 25, j === 0 ? '#fff8e8' : '#f4d878'));
+      });
+      if (sections[3]) {
+        chalkLine(ctx, 175, 610, W-175, 610, theme.accent, 2);
+        drawCentered(ctx, `${sections[3].heading}${boardLines(sections[3], 1)[0] ? '：' + boardLines(sections[3], 1)[0] : ''}`, W/2, 650, W-350, 25, '#f4d878');
+      }
+    }
+
+    function drawRadial(ctx, data, sections, theme) {
+      const W = ctx.canvas.width, cx=W/2, cy=390;
+      roundedRect(ctx, cx-165, cy-60, 330, 120, 58, theme.accent);
+      drawCentered(ctx, data.title, cx, cy, 280, 38, '#f8f4df');
+      sections.forEach((section,i) => {
+        const angle=-Math.PI/2 + i*(Math.PI*2/sections.length);
+        const x=cx+Math.cos(angle)*400, y=cy+Math.sin(angle)*220;
+        arrow(ctx, cx+Math.cos(angle)*175, cy+Math.sin(angle)*70, x-Math.cos(angle)*105, y-Math.sin(angle)*44, '#e7ead8');
+        roundedRect(ctx,x-112,y-50,224,100,18,'#e7ead8');
+        drawCentered(ctx, section.heading, x, y-10, 200, 27, '#f8f4df');
+        if(section.details[0]) drawCentered(ctx, boardLines(section, 1)[0], x, y+25, 200, 22, '#f2d87d');
+      });
+    }
+
+    function drawHierarchy(ctx, data, sections, theme) {
+      const W = ctx.canvas.width;
+      drawCentered(ctx, data.title, W/2, 72, W-180, 56, '#fff8e8');
+      chalkLine(ctx, 190, 118, W-190, 118, theme.accent, 3);
+      const count = Math.min(3, sections.length);
+      const boxW = Math.min(760, W - 270), boxH = 112;
+      sections.slice(0, count).forEach((section, i) => {
+        const x = (W-boxW)/2 + (i%2 ? 54 : -54), y = 175 + i*145;
+        const color = [theme.accent, '#9bd9ea', '#f58b87'][i];
+        chalkLine(ctx, W/2, i === 0 ? 120 : y-32, x+boxW/2, y, color, 3);
+        roundedRect(ctx, x, y, boxW, boxH, 18, color);
+        drawCentered(ctx, section.heading, x+boxW/2, y+34, boxW-50, 31, color);
+        const details = boardLines(section, 2).join('  ·  ');
+        if (details) drawCentered(ctx, details, x+boxW/2, y+78, boxW-55, 23, '#fff8e8');
+        if (i < count-1) arrow(ctx, x+boxW/2, y+boxH+8, W/2, y+boxH+32, '#f1ead2');
+      });
+      if (sections.length > 3) drawCentered(ctx, `核心结论：${boardLines(sections[3], 2).join('  ')}`, W/2, 635, W-220, 25, '#f4d878');
+    }
+
+    function drawGrid(ctx, data, sections, theme) {
+      const W = ctx.canvas.width;
+      drawCentered(ctx, data.title, W/2, 72, W-170, 54, '#fff8e8');
+      chalkLine(ctx, 130, 112, W-130, 112, theme.accent, 3);
+      const colors = [theme.accent, '#9bd9ea', '#f4d878', '#f58b87'];
+      const gap = 30, boxW = (W-170-gap)/2, boxH = 205;
+      sections.slice(0, 4).forEach((section, i) => {
+        const x = 70 + (i%2)*(boxW+gap), y = 155 + Math.floor(i/2)*(boxH+38);
+        const color = colors[i];
+        roundedRect(ctx, x, y, boxW, boxH, 16, '#eee9d6');
+        drawCentered(ctx, section.heading, x+boxW/2, y+34, boxW-52, 29, color);
+        chalkLine(ctx, x+30, y+66, x+boxW-30, y+66, color, 2);
+        boardLines(section, 3).forEach((line, j) => drawCentered(ctx, line, x+boxW/2, y+112+j*34, boxW-52, 22, j === 0 ? '#fff8e8' : '#f4d878'));
+        if (i%2 === 0 && sections[i+1]) arrow(ctx, x+boxW+6, y+boxH/2, x+boxW+gap-6, y+boxH/2, '#f1ead2');
+      });
+    }
+
+    function drawMindmap(ctx, data, sections, theme) {
+      const W = ctx.canvas.width, cx = W/2, cy = 390;
+      drawCentered(ctx, data.title, cx, 70, W-180, 53, '#fff8e8');
+      const radius = 145;
+      ctx.save(); ctx.lineWidth = 6; ctx.strokeStyle = theme.accent; ctx.globalAlpha = .9;
+      ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+      drawCentered(ctx, data.title, cx, cy, 245, 39, '#fff8e8');
+      const colors = [theme.accent, '#9bd9ea', '#f4d878', '#f58b87'];
+      sections.slice(0, 4).forEach((section, i) => {
+        const angle = -Math.PI/2 + i*Math.PI/2;
+        const x = cx + Math.cos(angle)*390, y = cy + Math.sin(angle)*210;
+        const color = colors[i];
+        chalkLine(ctx, cx + Math.cos(angle)*radius, cy + Math.sin(angle)*radius, x - Math.cos(angle)*105, y - Math.sin(angle)*42, color, 4);
+        roundedRect(ctx, x-120, y-48, 240, 96, 28, color);
+        drawCentered(ctx, section.heading, x, y-8, 210, 28, color);
+        if (section.details[0]) drawCentered(ctx, boardLines(section, 1)[0], x, y+25, 205, 20, '#fff8e8');
+      });
+    }
+
+    function bubble(ctx, x, y, w, h, color) {
+      ctx.save();
+      ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.globalAlpha = .92;
+      ctx.beginPath(); ctx.ellipse(x, y, w/2, h/2, 0, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+
+    function leafShape(ctx, x, y, w, h, color) {
+      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.globalAlpha = .92;
+      ctx.beginPath();
+      ctx.moveTo(x-w/2, y);
+      ctx.bezierCurveTo(x-w*.22, y-h*.62, x+w*.34, y-h*.58, x+w/2, y);
+      ctx.bezierCurveTo(x+w*.22, y+h*.62, x-w*.34, y+h*.58, x-w/2, y);
+      ctx.stroke(); chalkLine(ctx, x-w*.34, y, x+w*.32, y, color, 2); ctx.restore();
+    }
+
+    function drawBubbles(ctx, data, sections, theme) {
+      const W = ctx.canvas.width;
+      drawCentered(ctx, data.title, W/2, 68, W-180, 54, '#fff8e8');
+      const positions = [[W*.23, 295], [W*.5, 405], [W*.77, 295], [W*.5, 570]];
+      const colors = [theme.accent, '#9bd9ea', '#f58b87', '#f4d878'];
+      sections.slice(0, 4).forEach((section, i) => {
+        const [x, y] = positions[i], color = colors[i];
+        if (i) chalkLine(ctx, W/2, 175, x, y-75, color, 2);
+        bubble(ctx, x, y, i === 3 ? 390 : 300, i === 3 ? 150 : 175, color);
+        drawCentered(ctx, section.heading, x, y-27, i === 3 ? 330 : 250, 29, color);
+        boardLines(section, 3).forEach((line, j) => drawCentered(ctx, line, x, y+22+j*32, i === 3 ? 330 : 235, 21, '#fff8e8'));
+      });
+      bubble(ctx, W/2, 165, 260, 72, theme.accent);
+      drawCentered(ctx, '核心主题', W/2, 165, 210, 26, theme.accent);
+    }
+
+    function drawStairs(ctx, data, sections, theme) {
+      const W = ctx.canvas.width;
+      drawCentered(ctx, data.title, W/2, 68, W-180, 54, '#fff8e8');
+      const count = Math.min(4, sections.length), stepW = 238, stepH = 108, startX = 135, baseY = 610;
+      sections.slice(0, count).forEach((section, i) => {
+        const x = startX + i*stepW, y = baseY - i*stepH;
+        const color = [theme.accent, '#9bd9ea', '#f4d878', '#f58b87'][i];
+        ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.globalAlpha = .92;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+stepW, y); ctx.lineTo(x+stepW, y+stepH); ctx.lineTo(x, y+stepH); ctx.closePath(); ctx.stroke(); ctx.restore();
+        drawCentered(ctx, section.heading, x+stepW/2, y+33, stepW-28, 27, color);
+        if (section.details[0]) drawCentered(ctx, boardLines(section, 1)[0], x+stepW/2, y+74, stepW-32, 20, '#fff8e8');
+      });
+      arrow(ctx, 105, 635, W-110, 200, '#f1ead2');
+      drawCentered(ctx, '逐步成长', W-155, 168, 150, 23, '#f4d878');
+    }
+
+    function drawScroll(ctx, data, sections, theme) {
+      const W = ctx.canvas.width, x = 160, y = 165, w = W-320, h = 420;
+      drawCentered(ctx, data.title, W/2, 68, W-180, 54, '#fff8e8');
+      ctx.save(); ctx.strokeStyle = '#f1ead2'; ctx.lineWidth = 3; ctx.globalAlpha = .94;
+      ctx.beginPath();
+      ctx.moveTo(x+28, y); ctx.quadraticCurveTo(x, y+20, x+28, y+42); ctx.lineTo(x+28, y+h-42); ctx.quadraticCurveTo(x, y+h-20, x+28, y+h);
+      ctx.lineTo(x+w-28, y+h); ctx.quadraticCurveTo(x+w, y+h-20, x+w-28, y+h-42); ctx.lineTo(x+w-28, y+42); ctx.quadraticCurveTo(x+w, y+20, x+w-28, y); ctx.closePath(); ctx.stroke();
+      chalkLine(ctx, x+52, y+72, x+w-52, y+72, theme.accent, 2); ctx.restore();
+      sections.slice(0, 3).forEach((section, i) => {
+        const rowY = y+125+i*105;
+        bubble(ctx, x+96, rowY, 90, 58, [theme.accent, '#9bd9ea', '#f58b87'][i]);
+        drawCentered(ctx, section.heading, x+96, rowY, 72, 20, '#fff8e8');
+        drawCentered(ctx, boardLines(section, 3).join('  ·  ') || section.heading, x+w*.58, rowY, w*.55, 24, i === 1 ? '#9bd9ea' : '#f4d878');
+      });
+    }
+
+    function drawLeaf(ctx, data, sections, theme) {
+      const W = ctx.canvas.width, cx = W/2, cy = 375;
+      drawCentered(ctx, data.title, cx, 68, W-180, 54, '#fff8e8');
+      leafShape(ctx, cx, cy, 330, 150, theme.accent);
+      drawCentered(ctx, data.title, cx, cy, 225, 32, '#fff8e8');
+      const positions = [[W*.22, 225], [W*.78, 225], [W*.22, 555], [W*.78, 555]];
+      sections.slice(0, 4).forEach((section, i) => {
+        const [x, y] = positions[i], color = [theme.accent, '#9bd9ea', '#f4d878', '#f58b87'][i];
+        chalkLine(ctx, cx + (x<cx ? -140 : 140), cy + (y<cy ? -42 : 42), x + (x<cx ? 95 : -95), y, color, 2);
+        leafShape(ctx, x, y, 220, 112, color);
+        drawCentered(ctx, section.heading, x, y-15, 175, 24, color);
+        if (section.details[0]) drawCentered(ctx, boardLines(section, 1)[0], x, y+21, 170, 18, '#fff8e8');
+      });
+    }
+
+    function cloudShape(ctx, x, y, w, h, color) {
+      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.globalAlpha = .94;
+      ctx.beginPath();
+      ctx.moveTo(x-w*.42, y+h*.16);
+      ctx.bezierCurveTo(x-w*.58, y-h*.04, x-w*.4, y-h*.38, x-w*.18, y-h*.26);
+      ctx.bezierCurveTo(x-w*.1, y-h*.55, x+w*.22, y-h*.48, x+w*.25, y-h*.2);
+      ctx.bezierCurveTo(x+w*.55, y-h*.3, x+w*.58, y+h*.18, x+w*.35, y+h*.25);
+      ctx.bezierCurveTo(x+w*.18, y+h*.48, x-w*.18, y+h*.45, x-w*.42, y+h*.16);
+      ctx.stroke(); ctx.restore();
+    }
+
+    function heartShape(ctx, x, y, w, h, color) {
+      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.globalAlpha = .94;
+      ctx.beginPath(); ctx.moveTo(x, y+h*.45);
+      ctx.bezierCurveTo(x-w*.7, y-h*.05, x-w*.4, y-h*.62, x, y-h*.22);
+      ctx.bezierCurveTo(x+w*.4, y-h*.62, x+w*.7, y-h*.05, x, y+h*.45);
+      ctx.stroke(); ctx.restore();
+    }
+
+    function drawBook(ctx, data, sections, theme) {
+      const W = ctx.canvas.width, cx = W/2, top = 172, bottom = 595;
+      drawCentered(ctx, data.title, cx, 72, W-160, 56, '#fff8e8');
+      chalkLine(ctx, 230, 118, W-230, 118, theme.accent, 3);
+      ctx.save(); ctx.strokeStyle = '#f1ead2'; ctx.lineWidth = 3; ctx.globalAlpha = .92;
+      ctx.beginPath();
+      ctx.moveTo(cx, top+20); ctx.quadraticCurveTo(cx-120, top-25, 110, top+35); ctx.lineTo(110, bottom-35); ctx.quadraticCurveTo(cx-120, bottom-75, cx, bottom); ctx.quadraticCurveTo(cx+120, bottom-75, W-110, bottom-35); ctx.lineTo(W-110, top+35); ctx.quadraticCurveTo(cx+120, top-25, cx, top+20); ctx.stroke();
+      chalkLine(ctx, cx, top+20, cx, bottom, '#f1ead2', 2); ctx.restore();
+      const pairs = [[sections[0], cx-210, top+125, theme.accent], [sections[1], cx+210, top+125, '#9bd9ea']];
+      pairs.forEach(([section, x, y, color]) => {
+        if (!section) return;
+        drawCentered(ctx, section.heading, x, y, 265, 31, color);
+        boardLines(section, 4).forEach((line, i) => drawCentered(ctx, line, x, y+60+i*43, 250, 24, '#fff8e8'));
+      });
+      if (sections[2]) {
+        cloudShape(ctx, cx, 635, 520, 75, '#f4d878');
+        drawCentered(ctx, `${sections[2].heading}${boardLines(sections[2], 1)[0] ? '：' + boardLines(sections[2], 1)[0] : ''}`, cx, 635, 440, 23, '#f4d878');
+      }
+    }
+
+    function drawDoodle(ctx, data, sections, theme) {
+      const W = ctx.canvas.width, cx = W/2;
+      drawCentered(ctx, data.title, cx, 72, W-160, 56, '#fff8e8');
+      cloudShape(ctx, cx, 210, 420, 110, theme.accent);
+      drawCentered(ctx, data.title, cx, 210, 330, 34, '#fff8e8');
+      const shapes = [
+        [sections[0], W*.24, 420, 'leaf', theme.accent],
+        [sections[1], W*.76, 420, 'heart', '#f58b87'],
+        [sections[2], W*.3, 610, 'cloud', '#9bd9ea'],
+        [sections[3], W*.7, 610, 'bubble', '#f4d878']
+      ];
+      shapes.forEach(([section, x, y, type, color]) => {
+        if (!section) return;
+        if (type === 'leaf') leafShape(ctx, x, y, 260, 135, color);
+        else if (type === 'heart') heartShape(ctx, x, y, 185, 130, color);
+        else if (type === 'cloud') cloudShape(ctx, x, y, 310, 105, color);
+        else bubble(ctx, x, y, 280, 115, color);
+        drawCentered(ctx, section.heading, x, y-13, type === 'heart' ? 145 : 220, 25, color);
+        if (section.details[0]) drawCentered(ctx, boardLines(section, 1)[0], x, y+25, type === 'heart' ? 145 : 220, 19, '#fff8e8');
+      });
+    }
+
+    function drawBoard(canvas, data) {
+      if (!canvas) return '';
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const themes = [
+        { a:'#102e29', b:'#174c3f', c:'#0b2823', frame:'#e9e4d0', title:'#fff8e8', accent:'#f3d06f' },
+        { a:'#121313', b:'#292b2c', c:'#0c0d0e', frame:'#e5dfcb', title:'#fff8e8', accent:'#f58b87' },
+        { a:'#241712', b:'#4b2b1f', c:'#1a100d', frame:'#f2e8d4', title:'#fff8e8', accent:'#f4d878' },
+        { a:'#123a31', b:'#1e5748', c:'#0d2c25', frame:'#e6e2cf', title:'#fff8e8', accent:'#9bd9ea' }
+      ];
+      const theme = themes[(boardHash(data.title) + boardVariantOffset) % themes.length];
+      const grad = ctx.createLinearGradient(0,0,W,H);
+      grad.addColorStop(0, theme.a); grad.addColorStop(.55, theme.b); grad.addColorStop(1, theme.c);
+      ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+      ctx.globalAlpha = .055;
+      for (let i=0; i<520; i++) { const x=(i*83)%W, y=(i*47)%H; ctx.fillStyle=i%3?'#fff':'#071f19'; ctx.fillRect(x,y,1+(i%4),1); }
+      const sections = data.sections.length ? data.sections : [{ heading: '请在“板书设计”下填写内容', details: [] }];
+      const style = boardStyleFor(data);
+      if (!['book', 'doodle'].includes(style)) {
+        ctx.globalAlpha = 1;
+        chalkLine(ctx, 24, 25, W-24, 25, theme.frame, 4);
+        chalkLine(ctx, 24, H-25, W-24, H-25, theme.frame, 4);
+        chalkLine(ctx, 25, 24, 25, H-24, theme.frame, 4);
+        chalkLine(ctx, W-25, 24, W-25, H-24, theme.frame, 4);
+      }
+      if (style === 'timeline') drawTimeline(ctx, data, sections, theme);
+      else if (style === 'process') drawProcess(ctx, data, sections, theme);
+      else if (style === 'compare') drawCompare(ctx, data, sections, theme);
+      else if (style === 'columns') drawColumns(ctx, data, sections, theme);
+      else if (style === 'hierarchy') drawHierarchy(ctx, data, sections, theme);
+      else if (style === 'grid') drawGrid(ctx, data, sections, theme);
+      else if (style === 'mindmap') drawMindmap(ctx, data, sections, theme);
+      else if (style === 'bubbles') drawBubbles(ctx, data, sections, theme);
+      else if (style === 'stairs') drawStairs(ctx, data, sections, theme);
+      else if (style === 'scroll') drawScroll(ctx, data, sections, theme);
+      else if (style === 'leaf') drawLeaf(ctx, data, sections, theme);
+      else if (style === 'book') drawBook(ctx, data, sections, theme);
+      else if (style === 'doodle') drawDoodle(ctx, data, sections, theme);
+      else drawRadial(ctx, data, sections, theme);
+      ctx.globalAlpha=.38; chalkLine(ctx, 38, H-33, W-38, H-33, '#e9e7d5', 2); ctx.globalAlpha=1;
+      return style;
+    }
+
+    function applyPageScale() {
+      const hostWidth = Math.min(794, Math.max(260, els.pages.clientWidth));
+      const scale = hostWidth / 794;
+      document.querySelectorAll('.page-shell').forEach(shell => {
+        shell.style.width = `${794*scale}px`;
+        shell.style.height = `${1123*scale}px`;
+        shell.querySelector('.page').style.transform = `scale(${scale})`;
+      });
+    }
+
+    function layout() {
+      const source = els.source.value.trim();
+      localStorage.setItem('trial-layout-text', source);
+      els.pages.replaceChildren();
+      if (!source) {
+        const p = createPage(1, false);
+        p.flow.innerHTML = '<div class="empty-state">请粘贴试讲稿</div>';
+        applyPageScale();
+        els.status.textContent = '等待粘贴稿件。';
         return;
       }
-      claims[code] = deviceId;
-      localStorage.setItem(CLAIMS_KEY, JSON.stringify(claims));
-      button.disabled = true;
-      button.textContent = '验证成功，正在进入…';
-      setTimeout(() => { window.location.href = TARGET_URL; }, 350);
+      const parts = splitSource(source);
+      const blocks = classifyBlocks(parts.body);
+      const hasBoard = els.autoBoard.checked && !!parts.board;
+      const targetCount = Number(els.targetPages.value);
+      const pages = Array.from({length: targetCount}, (_, index) => createPage(index + 1, hasBoard && index === targetCount - 1));
+      document.getElementById('previewTitle').textContent = `${targetCount} 页预览`;
+      const maxFont = Number(els.maxFont.value), minFont = Number(els.minFont.value);
+      let chosenFont = minFont, chosenLeading = 1.15, remaining = [];
+      const leadingOptions = [1.62,1.55,1.48,1.42,1.36,1.30,1.24,1.18,1.15];
+      outer: for (let size=maxFont; size>=minFont; size--) {
+        for (const leading of leadingOptions) {
+          pages.forEach(p => {
+            p.page.style.fontFamily = els.font.value;
+            p.page.style.fontSize = `${size}px`;
+            p.page.style.setProperty('--doc-leading', leading);
+            p.page.style.setProperty('--heading-color', els.color.value);
+          });
+          remaining = flowBlocks(blocks, pages);
+          if (!remaining.length) { chosenFont=size; chosenLeading=leading; break outer; }
+        }
+      }
+      if (remaining.length) {
+        chosenFont=minFont; chosenLeading=1.15;
+        pages.forEach(p => {
+          p.page.style.fontSize=`${minFont}px`;
+          p.page.style.setProperty('--doc-leading','1.15');
+        });
+        remaining = flowBlocks(blocks,pages);
+      }
+      const boardStyle = hasBoard ? drawBoard(pages[pages.length - 1].canvas, parseBoard(parts.board)) : '';
+      applyPageScale();
+      const headingCount = blocks.filter(b => b.type==='heading').length;
+      els.summary.textContent = `${source.length} 字 · ${headingCount} 个标题 · ${chosenFont}px / ${chosenLeading} 倍行距`;
+      if (remaining.length) {
+        const omitted = remaining.reduce((n,b)=>n+b.text.length,0);
+        els.status.className='status error';
+        els.status.textContent=`稿件超过 ${targetCount} 页容量，最小字号下仍有约 ${omitted} 字未排入。请精简内容、增加页数或调低“最小字号”。`;
+      } else {
+        els.status.className='status';
+        const styleNames = { timeline:'时间轴', radial:'中心放射', process:'流程箭头', compare:'对照分栏', columns:'三栏结构' };
+        els.status.textContent=`已固定排成 ${targetCount} 页：识别 ${headingCount} 个标题${hasBoard ? `，板书采用${styleNames[boardStyle] || '自动'}版式并放入第 ${targetCount} 页` : ''}。`;
+      }
+    }
+
+    function isAppleMobile() {
+      return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    async function exportThroughNativeApp(blob, name) {
+      const id = `export-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const mime = blob.type || 'application/octet-stream';
+      const iosBridge = window.webkit?.messageHandlers?.trialLayoutExport;
+      const androidBridge = window.AndroidExport;
+      if (!iosBridge && !(androidBridge && typeof androidBridge.start === 'function')) return false;
+      if (iosBridge) iosBridge.postMessage({ action: 'start', id, name, mime });
+      else androidBridge.start(id, name, mime);
+      const chunkSize = 48 * 1024;
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        let binary = '';
+        const chunk = bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length));
+        for (let i = 0; i < chunk.length; i++) binary += String.fromCharCode(chunk[i]);
+        const data = btoa(binary);
+        if (iosBridge) iosBridge.postMessage({ action: 'chunk', id, data });
+        else androidBridge.append(id, data);
+      }
+      if (iosBridge) iosBridge.postMessage({ action: 'finish', id });
+      else androidBridge.finish(id);
+      return true;
+    }
+
+    async function downloadBlob(blob, name) {
+      if (await exportThroughNativeApp(blob, name)) {
+        els.status.textContent='正在打开系统分享，请选择“存储到文件”、微信、WPS 或百度网盘。';
+        return true;
+      }
+      const appleMobile = isAppleMobile();
+      const file = typeof File === 'function' ? new File([blob], name, { type: blob.type || 'application/octet-stream' }) : null;
+      const canShareFile = file && navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }));
+      if (appleMobile && canShareFile) {
+        try {
+          els.status.textContent='已打开系统分享，请选择“存储到文件”、微信、WPS 或百度网盘。';
+          await navigator.share({ files: [file], title: name });
+          return true;
+        } catch (error) {
+          if (error.name === 'AbortError') return false;
+        }
+      }
+      const url=URL.createObjectURL(blob), a=document.createElement('a');
+      a.href=url; a.download=name; a.style.display='none';
+      if (appleMobile) a.target='_blank';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), appleMobile ? 30000 : 1000);
+      if (appleMobile) els.status.textContent='文件已打开，请点击 Safari 的“分享”按钮并选择“存储到文件”或发送到微信、WPS、百度网盘。';
+      return true;
+    }
+
+    function outputBaseName() {
+      const courseName = currentCourseName();
+      const material = extractTrialMaterial();
+      return material ? `《${courseName}》（试讲素材：${material}）` : `《${courseName}》试讲稿`;
+    }
+
+    function currentCourseName() {
+      const firstLine = normalize(els.source.value).split('\n').map(line => line.trim()).find(Boolean) || '未命名课程';
+      const bookTitle = firstLine.match(/《([^》]+)》/);
+      let courseName = bookTitle ? bookTitle[1] : firstLine
+        .replace(/(?:无生)?试讲(?:逐字)?稿.*$/i, '')
+        .replace(/教案.*$/i, '')
+        .trim();
+      return (courseName || '未命名课程').replace(/[\\/:*?"<>|]/g, '-');
+    }
+
+    function extractTrialMaterial() {
+      const match = normalize(els.source.value).match(/(?:试讲素材|素材)\s*[：:]\s*([^\n\r（）()]+)/i);
+      return match ? match[1].trim().replace(/[\\/:*?"<>|]/g, '-').slice(0, 80) : '';
+    }
+
+    function selectedFontName() {
+      return els.font.value.split(',')[0].replace(/["']/g, '').trim();
+    }
+
+    function nearestWordHighlight(hex) {
+      const colors = {
+        yellow: '#ffff00', turquoise: '#00ffff', green: '#00ff00', pink: '#ff00ff',
+        blue: '#0000ff', red: '#ff0000', darkBlue: '#000080', darkTeal: '#008080',
+        darkGreen: '#008000', violet: '#800080', darkRed: '#800000', darkYellow: '#808000',
+        gray50: '#808080', gray25: '#c0c0c0'
+      };
+      const source = hex.replace('#','');
+      const rgb = [0,2,4].map(index => parseInt(source.slice(index,index+2),16));
+      return Object.entries(colors).reduce((best, entry) => {
+        const value = entry[1].slice(1);
+        const target = [0,2,4].map(index => parseInt(value.slice(index,index+2),16));
+        const distance = target.reduce((sum, channel, index) => sum + Math.pow(channel-rgb[index],2),0);
+        return distance < best.distance ? { name: entry[0], distance } : best;
+      }, { name: 'turquoise', distance: Infinity }).name;
+    }
+
+    function wordFlowHtml(flow) {
+      const clone = flow.cloneNode(true);
+      const color = els.color.value;
+      const wordColor = nearestWordHighlight(color);
+      clone.querySelectorAll('.doc-title, .doc-heading, .doc-subheading').forEach(heading => {
+        const span = document.createElement('span');
+        span.textContent = heading.textContent;
+        span.setAttribute('style', `background-color:${color};mso-highlight:${wordColor};mso-shading:${color};font-weight:bold;`);
+        heading.replaceChildren(span);
+        heading.setAttribute('style', `${heading.classList.contains('doc-title') ? 'text-align:center;' : ''}margin:0 0 8pt;`);
+      });
+      return clone.innerHTML;
+    }
+
+    function exportPdf() {
+      const originalTitle = document.title;
+      document.title = outputBaseName();
+      const restore = () => {
+        document.title = originalTitle;
+        window.removeEventListener('afterprint', restore);
+      };
+      window.addEventListener('afterprint', restore);
+      window.print();
+      if (isAppleMobile()) els.status.textContent='已打开打印界面，请在预览页使用“分享”保存为 PDF。';
+      setTimeout(restore, 5000);
+    }
+
+    function wordDocumentHtml() {
+      const pages=[...document.querySelectorAll('.page')];
+      const fontName = selectedFontName();
+      const body=pages.map((p,i)=>`<section style="page-break-after:${i<pages.length-1?'always':'auto'};width:17.2cm;min-height:24.7cm;padding:1.5cm;font-family:'${fontName}';mso-fareast-font-family:'${fontName}';font-size:${p.style.fontSize};line-height:${p.style.getPropertyValue('--doc-leading')}">${wordFlowHtml(p.querySelector('.flow'))}${i===pages.length-1&&p.querySelector('canvas')?`<p><span style="background-color:${els.color.value};mso-highlight:${nearestWordHighlight(els.color.value)};font-weight:bold">五、板书设计</span></p><img style="width:100%" src="${p.querySelector('canvas').toDataURL('image/png')}">`:''}</section>`).join('');
+      return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>@page{size:21cm 29.7cm;margin:0}.doc-block{margin:0 0 8pt}</style></head><body>${body}</body></html>`;
+    }
+
+    function xmlEscape(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&apos;' })[char]);
+    }
+
+    function docxText(value) {
+      return xmlEscape(value).replace(/\n/g, '</w:t><w:br/><w:t xml:space="preserve">');
+    }
+
+    function docxRun(text, fontName, size, highlighted) {
+      const highlight = highlighted ? `<w:highlight w:val="${nearestWordHighlight(els.color.value)}"/><w:shd w:val="clear" w:color="auto" w:fill="${els.color.value.replace('#','')}"/>` : '';
+      return `<w:r><w:rPr><w:rFonts w:ascii="${xmlEscape(fontName)}" w:hAnsi="${xmlEscape(fontName)}" w:eastAsia="${xmlEscape(fontName)}"/><w:sz w:val="${size}"/><w:szCs w:val="${size}"/>${highlight}${highlight ? '<w:b/>' : ''}</w:rPr><w:t xml:space="preserve">${docxText(text)}</w:t></w:r>`;
+    }
+
+    function docxParagraph(block, fontName, fontSize, leading) {
+      const heading = /doc-(?:title|heading|subheading)/.test(block.className);
+      const centered = block.classList.contains('doc-title');
+      const size = heading ? Math.max(fontSize, Math.round(fontSize * 1.08)) : fontSize;
+      const line = Math.max(240, Math.round(size * 10 * leading));
+      return `<w:p><w:pPr>${centered ? '<w:jc w:val="center"/>' : ''}<w:spacing w:after="130" w:line="${line}" w:lineRule="auto"/></w:pPr>${docxRun(block.textContent, fontName, size, heading)}</w:p>`;
+    }
+
+    function boardImageXml(relId = 'rId2', name = 'board.png', docPrId = 1) {
+      return `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="5200000" cy="2925000"/><wp:docPr id="${docPrId}" name="${name}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="0" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${relId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="5200000" cy="2925000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+    }
+
+    async function buildDocxBlob() {
+      const pages = [...document.querySelectorAll('.page')];
+      const fontName = selectedFontName();
+      const body = [];
+      let boardBytes = null;
+      pages.forEach(page => {
+        const fontPx = Number.parseFloat(page.style.fontSize) || 16;
+        const fontSize = Math.max(16, Math.round(fontPx * 1.5));
+        const leading = Number.parseFloat(page.style.getPropertyValue('--doc-leading')) || 1.45;
+        [...page.querySelector('.flow').children].forEach(block => body.push(docxParagraph(block, fontName, fontSize, leading)));
+        const board = page.querySelector('canvas');
+        if (board) {
+          body.push(docxParagraph({ className:'doc-block doc-heading', textContent:'五、板书设计', classList:{ contains:() => false } }, fontName, fontSize, leading));
+          body.push(boardImageXml());
+          boardBytes = board.toDataURL('image/png');
+        }
+      });
+      const imageData = boardBytes ? new Uint8Array(await (await fetch(boardBytes)).arrayBuffer()) : null;
+      const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body.join('')}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="850" w:right="850" w:bottom="850" w:left="850"/></w:sectPr></w:body></w:document>`;
+      const files = [
+        { name:'[Content_Types].xml', data:new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${imageData ? '<Default Extension="png" ContentType="image/png"/>' : ''}<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`) },
+        { name:'_rels/.rels', data:new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`) },
+        { name:'word/document.xml', data:new TextEncoder().encode(documentXml) },
+        { name:'word/styles.xml', data:new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults/></w:styles>`) },
+        { name:'word/_rels/document.xml.rels', data:new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${imageData ? '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/board.png"/>' : ''}</Relationships>`) }
+      ];
+      if (imageData) files.push({ name:'word/media/board.png', data:imageData });
+      return new Blob([zipDocuments(files)], { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    }
+
+    async function exportWord() {
+      if (batchItems.length > 1) return exportBatchWord();
+      els.status.textContent='正在生成兼容 WPS 的 Word 文档……';
+      await downloadBlob(await buildDocxBlob(),`${outputBaseName()}.docx`);
+      els.status.className='status';
+      if (!isAppleMobile()) els.status.textContent='Word 文档已生成。';
+    }
+
+    async function buildMergedDocxBlob() {
+      const fontName = selectedFontName(), body = [], images = [];
+      for (let index = 0; index < batchItems.length; index++) {
+        els.source.value = batchItems[index].text;
+        els.boardStyle.value = batchItems[index].style || 'auto';
+        layout();
+        await new Promise(requestAnimationFrame);
+        if (index) body.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+        [...document.querySelectorAll('.page')].forEach(page => {
+          const fontPx = Number.parseFloat(page.style.fontSize) || 16;
+          const fontSize = Math.max(16, Math.round(fontPx * 1.5));
+          const leading = Number.parseFloat(page.style.getPropertyValue('--doc-leading')) || 1.45;
+          [...page.querySelector('.flow').children].forEach(block => body.push(docxParagraph(block, fontName, fontSize, leading)));
+          const board = page.querySelector('canvas');
+          if (board) {
+            const imageIndex = images.length + 1;
+            const name = `board-${imageIndex}.png`;
+            body.push(docxParagraph({ className:'doc-block doc-heading', textContent:'五、板书设计', classList:{ contains:() => false } }, fontName, fontSize, leading));
+            body.push(boardImageXml(`rId${imageIndex + 1}`, name, imageIndex));
+            images.push({ name, dataUrl: board.toDataURL('image/png') });
+          }
+        });
+        els.status.textContent = `正在合并第 ${index + 1} / ${batchItems.length} 篇试讲稿……`;
+      }
+      const imageFiles = await Promise.all(images.map(async image => ({ name: `word/media/${image.name}`, data: new Uint8Array(await (await fetch(image.dataUrl)).arrayBuffer()) })));
+      const imageRelations = images.map((image, index) => `<Relationship Id="rId${index + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${image.name}"/>`).join('');
+      const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body.join('')}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="850" w:right="850" w:bottom="850" w:left="850"/></w:sectPr></w:body></w:document>`;
+      const files = [
+        { name:'[Content_Types].xml', data:new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${images.length ? '<Default Extension="png" ContentType="image/png"/>' : ''}<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`) },
+        { name:'_rels/.rels', data:new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`) },
+        { name:'word/document.xml', data:new TextEncoder().encode(documentXml) },
+        { name:'word/styles.xml', data:new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults/></w:styles>`) },
+        { name:'word/_rels/document.xml.rels', data:new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${imageRelations}</Relationships>`) },
+        ...imageFiles
+      ];
+      return new Blob([zipDocuments(files)], { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    }
+
+    const crcTable = (() => {
+      const table = new Uint32Array(256);
+      for (let n=0; n<256; n++) { let c=n; for(let k=0; k<8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; table[n]=c>>>0; }
+      return table;
+    })();
+
+    function crc32(bytes) {
+      let c = 0xffffffff;
+      for (const byte of bytes) c = crcTable[(c ^ byte) & 255] ^ (c >>> 8);
+      return (c ^ 0xffffffff) >>> 0;
+    }
+
+    function zipDocuments(files) {
+      const encoder = new TextEncoder(), chunks = [], directory = [];
+      let offset = 0;
+      files.forEach(file => {
+        const name = encoder.encode(file.name), data = file.data, crc = crc32(data), local = new Uint8Array(30 + name.length + data.length), view = new DataView(local.buffer);
+        view.setUint32(0,0x04034b50,true); view.setUint16(4,20,true); view.setUint16(6,0x800,true); view.setUint16(8,0,true); view.setUint32(14,crc,true); view.setUint32(18,data.length,true); view.setUint32(22,data.length,true); view.setUint16(26,name.length,true);
+        local.set(name,30); local.set(data,30+name.length); chunks.push(local);
+        const central = new Uint8Array(46 + name.length), cv = new DataView(central.buffer);
+        cv.setUint32(0,0x02014b50,true); cv.setUint16(4,20,true); cv.setUint16(6,20,true); cv.setUint16(8,0x800,true); cv.setUint32(16,crc,true); cv.setUint32(20,data.length,true); cv.setUint32(24,data.length,true); cv.setUint16(28,name.length,true); cv.setUint32(42,offset,true); central.set(name,46); directory.push(central); offset += local.length;
+      });
+      const centralSize = directory.reduce((size, item) => size + item.length, 0), end = new Uint8Array(22), ev = new DataView(end.buffer);
+      ev.setUint32(0,0x06054b50,true); ev.setUint16(8,files.length,true); ev.setUint16(10,files.length,true); ev.setUint32(12,centralSize,true); ev.setUint32(16,offset,true);
+      return new Blob([...chunks, ...directory, end], {type:'application/zip'});
+    }
+
+    async function exportBatchWord() {
+      if (batchItems.length < 2) return exportWord();
+      saveCurrentBatchItem();
+      const originalIndex = batchIndex, originalText = els.source.value, originalStyle = els.boardStyle.value;
+      els.batchExport.disabled = true;
+      try {
+        await downloadBlob(await buildMergedDocxBlob(), `试讲稿合并排版-${batchItems.length}篇.docx`);
+        if (!isAppleMobile()) els.status.textContent = `${batchItems.length} 篇试讲稿已合并为一个 Word 文档。`;
+      } finally {
+        batchIndex = originalIndex;
+        els.source.value = originalText;
+        els.boardStyle.value = originalStyle;
+        layout();
+        updateBatchControls();
+        els.batchExport.disabled = false;
+      }
+    }
+
+    async function elementToPng(element) {
+      if (typeof html2canvas !== 'function') throw new Error('图片导出组件未加载');
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        width: 794,
+        height: 1123,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false
+      });
+      return new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+    }
+
+    async function exportImages() {
+      const pages=[...document.querySelectorAll('.page')];
+      els.status.textContent='正在生成逐页图片……';
+      try {
+        for(let i=0;i<pages.length;i++) await downloadBlob(await elementToPng(pages[i]),`${outputBaseName()}-第${i+1}页.png`);
+        if (!isAppleMobile()) els.status.textContent=`${pages.length} 张页面图片已生成。`;
+      } catch(e) {
+        els.status.className='status error';
+        els.status.textContent='当前浏览器无法生成整页图片，请使用 PDF 输出；板书图片仍可单独下载。';
+      }
+    }
+
+    function clearSource() {
+      els.source.value = '';
+      batchItems = [];
+      batchIndex = 0;
+      localStorage.removeItem('trial-layout-text');
+      layout();
+      updateBatchControls();
+      els.source.focus();
+    }
+
+    document.getElementById('layoutBtn').addEventListener('click',layout);
+    document.getElementById('clearBtn').addEventListener('click',clearSource);
+    document.getElementById('clearEditorBtn').addEventListener('click',clearSource);
+    document.getElementById('importBtn').addEventListener('click',()=>els.fileImport.click());
+    els.fileImport.addEventListener('change',async()=>{
+      await importFiles(els.fileImport.files);
+      els.fileImport.value = '';
     });
+    document.getElementById('prevBatch').addEventListener('click',()=>showBatchItem(batchIndex-1));
+    document.getElementById('nextBatch').addEventListener('click',()=>showBatchItem(batchIndex+1));
+    els.batchExport.addEventListener('click',exportBatchWord);
+    [els.font,els.color,els.maxFont,els.minFont,els.targetPages,els.autoBoard].forEach(el=>el.addEventListener('change',layout));
+    els.boardStyle.addEventListener('change',()=>{ saveCurrentBatchItem(); layout(); updateBatchControls(); });
+    document.getElementById('shuffleBoard').addEventListener('click',()=>{ boardVariantOffset += 1; layout(); });
+    let inputTimer;
+    els.source.addEventListener('input',()=>{saveCurrentBatchItem();clearTimeout(inputTimer);inputTimer=setTimeout(layout,550);});
+    window.addEventListener('resize',applyPageScale);
+    document.getElementById('exportBtn').addEventListener('click',e=>{e.stopPropagation();document.getElementById('exportMenu').classList.toggle('open');});
+    document.addEventListener('click',()=>document.getElementById('exportMenu').classList.remove('open'));
+    document.getElementById('exportMenu').addEventListener('click',async e=>{
+      const action=e.target.dataset.export;
+      if(action==='pdf') exportPdf();
+      if(action==='word') await exportWord();
+      if(action==='images') await exportImages();
+      if(action==='board') {
+        const c=document.querySelector('.board-canvas');
+        if(c) {
+          const blob = await new Promise(resolve => c.toBlob(resolve, 'image/png'));
+          if (blob) await downloadBlob(blob, `${outputBaseName()}-板书设计.png`);
+        }
+      }
+    });
+    layout();
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
   </script>
 </body>
 </html>
