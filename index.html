@@ -1578,7 +1578,7 @@
     els.source.addEventListener('input',()=>{saveCurrentBatchItem();clearTimeout(inputTimer);inputTimer=setTimeout(layout,550);});
     window.addEventListener('resize',applyPageScale);
     document.getElementById('exportBtn').addEventListener('click',e=>{e.stopPropagation();document.getElementById('exportMenu').classList.toggle('open');});
-    document.addEventListener('click',()=>document.getElementById('exportMenu').classList.remove('open'));
+    document.addEventListener('click',()=>{ const exportMenu = document.getElementById('exportMenu'); if (exportMenu) exportMenu.classList.remove('open'); });
     document.getElementById('exportMenu').addEventListener('click',async e=>{
       const action=e.target.dataset.export;
       if(action==='pdf') exportPdf();
