@@ -1681,15 +1681,19 @@
         combinedText = els.source.value;
         localStorage.setItem('trial-plan-layout-combined', combinedText);
         const parts = splitCombinedText(combinedText);
-        documents.trial.text = parts?.trial || '';
-        documents.plan.text = parts?.plan || '';
+        documents.trial.text = parts && parts.trial ? parts.trial : '';
+        documents.plan.text = parts && parts.plan ? parts.plan : '';
       }
       function renderPreview() {
         const combinedValue = els.source.value;
-        els.source.value = documents[activeType].text;
         window.layoutDocumentType = activeType;
-        layout();
-        els.source.value = combinedValue;
+        const previewText = documents[activeType].text;
+        if (!previewText) {
+          layout();
+          return;
+        }
+        els.source.value = previewText;
+        try { layout(); } finally { els.source.value = combinedValue; }
         document.getElementById('previewTitle').textContent = `${documents[activeType].label}预览`;
       }
       function updateUi() {
@@ -1707,9 +1711,10 @@
         const text = documents[type].text;
         const firstLine = normalize(text).split('\n').map(line => line.trim()).find(Boolean) || '未命名课程';
         const title = (firstLine.match(/《([^》]+)》/) || [])[1] || firstLine.replace(/(?:无生)?试讲(?:逐字)?稿|教案|教学设计/g, '').trim() || '未命名课程';
-        const trialMaterial = normalize(documents.trial.text).match(/^\s*试讲素材\s*[：:]\s*([^\n\r（）()]+)/mi)?.[1]?.trim();
+        const materialMatch = normalize(documents.trial.text).match(/^\s*试讲素材\s*[：:]\s*([^\n\r（）()]+)/mi);
+        const trialMaterial = materialMatch && materialMatch[1] ? materialMatch[1].trim() : '';
         const safeTitle = title.replace(/[\\/:*?"<>|]/g, '-');
-        const safeMaterial = trialMaterial?.replace(/[\\/:*?"<>|]/g, '-');
+        const safeMaterial = trialMaterial ? trialMaterial.replace(/[\\/:*?"<>|]/g, '-') : '';
         if (!safeMaterial) return `《${safeTitle}》${documents[type].label}`;
         return type === 'trial'
           ? `《${safeTitle}》试讲稿（试讲素材：${safeMaterial}）`
